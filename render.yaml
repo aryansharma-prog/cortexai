@@ -1,0 +1,137 @@
+services:
+  # 1. Gateway (Public Web Service)
+  - type: web
+    name: cortexai-gateway
+    runtime: docker
+    dockerfilePath: backend/gateway/Dockerfile
+    dockerContext: backend
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: AUTH_SERVICE
+        fromService:
+          type: web
+          name: cortexai-auth
+          property: host
+      - key: CHAT_SERVICE
+        fromService:
+          type: web
+          name: cortexai-chat
+          property: host
+      - key: AGENT_SERVICE
+        fromService:
+          type: web
+          name: cortexai-agent
+          property: host
+      - key: BILLING_SERVICE
+        fromService:
+          type: web
+          name: cortexai-billing
+          property: host
+      - key: REDIS_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+
+  # 2. Auth Service
+  - type: web
+    name: cortexai-auth
+    runtime: docker
+    dockerfilePath: backend/services/auth/Dockerfile
+    dockerContext: backend
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8001
+      - key: MONGODB_URI
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  # 3. Chat Service
+  - type: web
+    name: cortexai-chat
+    runtime: docker
+    dockerfilePath: backend/services/chat/Dockerfile
+    dockerContext: backend
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8002
+      - key: MONGODB_URI
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  # 4. Billing Service
+  - type: web
+    name: cortexai-billing
+    runtime: docker
+    dockerfilePath: backend/services/billing/Dockerfile
+    dockerContext: backend
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8004
+      - key: MONGODB_URI
+        sync: false
+      - key: AUTH_SERVICE
+        fromService:
+          type: web
+          name: cortexai-auth
+          property: host
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+
+  # 5. Agent Service
+  - type: web
+    name: cortexai-agent
+    runtime: docker
+    dockerfilePath: backend/services/agent/Dockerfile
+    dockerContext: backend
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8003
+      - key: MONGODB_URI
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: AUTH_SERVICE
+        fromService:
+          type: web
+          name: cortexai-auth
+          property: host
+      - key: CHAT_SERVICE
+        fromService:
+          type: web
+          name: cortexai-chat
+          property: host
+      - key: GATEWAY_URL
+        fromService:
+          type: web
+          name: cortexai-gateway
+          property: host
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: QDRANT_URL
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_KEY
+        sync: false
+      - key: AWS_BUCKET_NAME
+        sync: false

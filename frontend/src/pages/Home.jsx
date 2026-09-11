@@ -1,5 +1,5 @@
-import { signInWithPopup } from 'firebase/auth'
-import React, { useState } from 'react'
+import { signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth'
+import React, { useState, useEffect } from 'react'
 import { auth, googleProvider } from '../../utils/firebase'
 import api from '../../utils/axios'
 import { FcGoogle } from "react-icons/fc";
@@ -28,6 +28,25 @@ function Home() {
         }
     }
 
+    // Handle redirect sign-in result on page load
+    useEffect(() => {
+        const checkRedirectResult = async () => {
+            try {
+                const result = await getRedirectResult(auth)
+                if (result?.user) {
+                    setIsLoggingIn(true)
+                    const token = await result.user.getIdToken()
+                    await handleLogin(token)
+                }
+            } catch (error) {
+                console.error("[Redirect Result Error]", error)
+            } finally {
+                setIsLoggingIn(false)
+            }
+        }
+        checkRedirectResult()
+    }, [])
+
     const googleLogin = async () => {
         try {
             setIsLoggingIn(true)
@@ -39,11 +58,16 @@ function Home() {
             console.error("[Firebase Popup Error]", error)
             let userMsg = "Login failed. Please try again."
             if (error?.code === "auth/popup-closed-by-user") {
-                userMsg = "Sign-in popup was closed before completing."
+                userMsg = "Sign-in popup was closed before completing. Please click below to try again."
             } else if (error?.code === "auth/unauthorized-domain") {
-                userMsg = "This domain is not authorized in Firebase Console (add localhost)."
+                userMsg = "This domain is not authorized in Firebase Console."
             } else if (error?.code === "auth/popup-blocked") {
-                userMsg = "Sign-in popup was blocked by your browser. Please allow popups."
+                userMsg = "Popup was blocked by your browser. Redirecting to Google login..."
+                // Fallback to full page redirect if popup is blocked
+                setTimeout(() => {
+                    signInWithRedirect(auth, googleProvider)
+                }, 1000)
+                return
             } else if (error?.message) {
                 userMsg = error.message
             }

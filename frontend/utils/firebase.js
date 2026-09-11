@@ -10,11 +10,6 @@ const firebaseConfig = {
   appId: "1:584896904072:web:db49adb081cf1c7e0c183d"
 };
 
-const app = initializeApp(firebaseConfig)
-export const auth = getAuth(app)
-export const googleProvider = new GoogleAuthProvider()
-googleProvider.addScope('email')
-googleProvider.addScope('profile')
-googleProvider.setCustomParameters({
-  prompt: 'select_account'
-})
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();

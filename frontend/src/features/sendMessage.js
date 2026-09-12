@@ -28,7 +28,12 @@ async function sendMessage(payload, signal = null) {
     }
 
     console.error("[sendMessage Error]", error);
-    return null;
+    const serverMessage = error?.response?.data?.message || error?.response?.data?.error || error?.message;
+    return {
+      status: "error",
+      answer: serverMessage ? `⚠️ Server response: ${serverMessage}` : null,
+      error: serverMessage
+    };
   }
 }
 

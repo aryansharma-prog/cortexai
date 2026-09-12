@@ -124,22 +124,26 @@ function ChatInput() {
     const signal = abortControllerRef.current.signal;
 
     let conversation = selectedConversation
-    if (!conversation) {
+    if (!conversation || !conversation._id) {
       dispatch(setMessages([]))
       const conv = await createConversation()
-      dispatch(setSelectedConversation(conv))
-      dispatch(addConversation(conv))
-      conversation = conv
+      if (conv && conv._id) {
+        dispatch(setSelectedConversation(conv))
+        dispatch(addConversation(conv))
+        conversation = conv
+      }
     }
 
-    if (conversation.title === "New Chat") {
-      await updateConversation({ id: conversation?._id, title: value.trim() })
-      dispatch(setConvTitle({ conversationId: conversation?._id, title: value.slice(0, 40) }))
+    if (conversation && conversation._id && conversation.title === "New Chat") {
+      await updateConversation({ id: conversation._id, title: value.trim() })
+      dispatch(setConvTitle({ conversationId: conversation._id, title: value.slice(0, 40) }))
     }
 
     const formData = new FormData()
     formData.append("prompt", value.trim())
-    formData.append("conversationId", conversation?._id)
+    if (conversation?._id) {
+      formData.append("conversationId", conversation._id)
+    }
     formData.append("agent", selectedAgent.toLowerCase())
     formData.append("executionId", executionId)
     if (selectedFile) {
@@ -167,11 +171,11 @@ function ChatInput() {
         role: "assistant",
         content: "⏹️ **Research stopped by user.**\n\nYou can refine your prompt or start a new search below."
       }))
-    } else if (data) {
+    } else if (data?.answer) {
       dispatch(setArtifacts(data.artifacts || []))
       dispatch(addMessage({
         role: "assistant",
-        content: data?.answer || "No response generated.",
+        content: data.answer,
         images: data?.images || [],
         workflow: data?.workflow || null,
         metrics: data?.metrics || null,
@@ -180,7 +184,7 @@ function ChatInput() {
     } else {
       dispatch(addMessage({
         role: "assistant",
-        content: "Sorry, I encountered an issue processing your request. Please try again."
+        content: data?.error ? `⚠️ ${data.error}` : "Sorry, I encountered an issue processing your request. Please try again."
       }))
     }
   }

@@ -49,7 +49,11 @@ export const login = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
-        return res.status(200).json(user);
+        const userObj = user.toObject ? user.toObject() : JSON.parse(JSON.stringify(user));
+        return res.status(200).json({
+            ...userObj,
+            sessionId
+        });
 
     } catch (error) {
         console.error("[Login Error]", error);
@@ -59,7 +63,9 @@ export const login = async (req, res) => {
 
 export const logOut = async (req, res) => {
     try {
-        const sessionId = req.cookies?.session;
+        const authHeader = req.headers.authorization || req.headers.Authorization;
+        const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+        const sessionId = req.cookies?.session || req.headers["x-session-id"] || req.body?.sessionId || bearerToken;
         if (sessionId) {
             await redis.del(`session-${sessionId}`);
         }

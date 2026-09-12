@@ -23,7 +23,9 @@ export const agent = async (req, res, next) => {
 
     console.log(`[AGENT] Request received: agent=${selectedAgent || "auto"}, userId=${userId}, executionId=${executionId}`);
 
-    if (conversationId && conversationId !== "undefined") {
+    const hasValidConv = conversationId && conversationId !== "undefined" && conversationId !== "null" && conversationId.trim() !== "";
+
+    if (hasValidConv) {
       await axios.post(`${process.env.CHAT_SERVICE}/save-message`, {
         conversationId,
         role: "user",
@@ -33,7 +35,7 @@ export const agent = async (req, res, next) => {
 
     const result = await graph.invoke({
       prompt,
-      conversationId,
+      conversationId: hasValidConv ? conversationId : null,
       agent: selectedAgent || "auto",
       userId,
       file,
@@ -69,7 +71,7 @@ export const agent = async (req, res, next) => {
       });
     }
 
-    if (conversationId && conversationId !== "undefined") {
+    if (hasValidConv) {
       await addMessage(conversationId, "user", prompt).catch(() => {});
       await addMessage(conversationId, "assistant", result?.aiResponse || "").catch(() => {});
       await axios.post(`${process.env.CHAT_SERVICE}/save-message`, {

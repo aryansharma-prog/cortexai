@@ -23,8 +23,8 @@ DOCUMENTATION
 User Request:
 ${state.prompt}
     `)
-    const intent=intentRes.content
-    if(intent=="CODE_GENERATION"){
+    const intent = (intentRes.content || "").trim()
+    if (intent == "CODE_GENERATION") {
         const prompt=`
         You are CortexAI Coding Agent.
 

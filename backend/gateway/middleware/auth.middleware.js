@@ -2,9 +2,12 @@ import redis from "../../shared/redis/redis.js"
 
 const protect = async (req, res, next) => {
     try {
-        const sessionId = req.cookies?.session;
+        const authHeader = req.headers.authorization || req.headers.Authorization;
+        const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+        const sessionId = req.cookies?.session || req.headers["x-session-id"] || bearerToken;
+
         if (!sessionId) {
-            console.warn(`[AUTH_MIDDLEWARE] Missing session cookie on ${req.method} ${req.originalUrl}`);
+            console.warn(`[AUTH_MIDDLEWARE] Missing session identifier (cookie or Authorization/x-session-id header) on ${req.method} ${req.originalUrl}`);
             return res.status(400).json({ message: "unauthorized" });
         }
         const session = await redis.get(`session-${sessionId}`);

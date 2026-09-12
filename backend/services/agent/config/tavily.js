@@ -1,7 +1,10 @@
+import dotenv from "dotenv";
+dotenv.config();
 import { TavilySearch } from "@langchain/tavily";
 
 export const searchTool = new TavilySearch({
   maxResults: 5,
   topic: "general",
-  includeImages:true
+  includeImages: true,
+  tavilyApiKey: process.env.TAVILY_API_KEY
 });

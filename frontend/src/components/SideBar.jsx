@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import { getConversations } from '../features/getConversations'
 import { useDispatch, useSelector } from 'react-redux'
 import { addConversation, setConversations, setSelectedConversation } from '../redux/conversationSlice'
+import { setMessages, setArtifacts, clearLiveExecution } from '../redux/messageSlice'
 
 import { createConversation } from '../features/createConversation'
 import logOut from '../features/logOut'
@@ -26,12 +27,20 @@ function SideBar() {
         getConv()
     }, [userData?._id])
 
-    const handleCreateConversation = async () => {
-        const data = await createConversation()
-        dispatch(addConversation(data))
+    const handleNewChat = () => {
+        dispatch(setSelectedConversation(null))
+        dispatch(setMessages([]))
+        dispatch(setArtifacts([]))
+        dispatch(clearLiveExecution())
+        setMobileOpen(false)
     }
 
-
+    const handleSelectConversation = (conv) => {
+        if (selectedConversation?._id === conv?._id) return
+        dispatch(setSelectedConversation(conv))
+        dispatch(clearLiveExecution())
+        setMobileOpen(false)
+    }
 
     if (collapsed) {
         return (
@@ -44,7 +53,7 @@ function SideBar() {
 
                 <button
                     className='flex items-center justify-center w-9 h-9 rounded-xl text-slate-500 hover:text-slate-200 hover:bg-white/[0.05] transition-colors duration-150 bg-transparent border-none cursor-pointer '
-                    onClick={()=>dispatch(setSelectedConversation(null))}
+                    onClick={handleNewChat}
                 >
                     <Plus size={17} />
                 </button>
@@ -54,7 +63,8 @@ function SideBar() {
                         const isActive = selectedConversation?._id == conv?._id
                         return (
                             <div
-                                onClick={() => dispatch(setSelectedConversation(conv))}
+                                key={conv?._id || i}
+                                onClick={() => handleSelectConversation(conv)}
                                 className={`flex items-center gap-2.5 cursor-pointer mb-0.5 px-3 py-2.5 rounded-[10px] border transition-colors duration-150
                 ${isActive ? "bg-indigo-500/10 border-indigo-500/[0.18]"
                                         : "bg-transparent border-transparent"}`}>
@@ -133,14 +143,14 @@ function SideBar() {
                     </span>
                     <span className='text-[10px] font-medium text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-full tracking-wide'>{userData?.plan || "free"}</span>
                     <button className='flex items-center justify-center w-7 h-7 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.05] transition-colors duration-150 bg-transparent border-none cursor-pointer'
-                        onClick={()=>dispatch(setSelectedConversation(null))}>
+                        onClick={handleNewChat}>
                         <PenSquare size={14} />
                     </button>
                 </div>
 
                 <div className='px-4 pt-4 pb-1'>
                     <button className='w-full flex items-center justify-center gap-2 text-sm font-medium text-white bg-linear-to-br from-indigo-500 to-violet-700 rounded-xl py-[10px] border-none cursor-pointer hover:opacity-90 transition-opacity duration-150'
-                        onClick={()=>dispatch(setSelectedConversation(null))}
+                        onClick={handleNewChat}
                     >
                         <Plus size={15} />
                         New Chat
@@ -165,7 +175,8 @@ function SideBar() {
                         const isActive = selectedConversation?._id == conv?._id
                         return (
                             <div
-                                onClick={() => dispatch(setSelectedConversation(conv))}
+                                key={conv?._id || i}
+                                onClick={() => handleSelectConversation(conv)}
                                 className={`flex items-center gap-2.5 cursor-pointer mb-0.5 px-3 py-2.5 rounded-[10px] border transition-colors duration-150
                 ${isActive ? "bg-indigo-500/10 border-indigo-500/[0.18]"
                                         : "bg-transparent border-transparent"}`}>

@@ -17,9 +17,19 @@ function MessageList() {
         })
     }, [messages?.length, isLoading])
 
+    const handleSuggestionClick = (prompt) => {
+        const textarea = document.querySelector('textarea');
+        if (textarea) {
+            textarea.value = prompt;
+            const event = new Event('input', { bubbles: true });
+            textarea.dispatchEvent(event);
+            textarea.focus();
+        }
+    };
+
     return (
         <div className='flex-1 overflow-y-auto px-4 md:px-7 py-6 space-y-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
-            {messages.length === 0 || !selectedConversation ? (
+            {messages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center gap-4 text-center">
                     <div className='flex flex-col gap-1.5'>
                         <h1 className='text-[22px] font-semibold text-slate-100 tracking-tight'>CortexAI</h1>
@@ -37,6 +47,7 @@ function MessageList() {
                         ].map((s) => (
                             <button
                                 key={s}
+                                onClick={() => handleSuggestionClick(s)}
                                 className='text-[12px] text-slate-400 bg-white/[0.04] border border-white/[0.07] px-3.5 py-1.5 rounded-lg hover:bg-white/[0.08] hover:text-slate-200 transition-colors duration-150 cursor-pointer'
                             >
                                 {s}

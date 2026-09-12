@@ -109,53 +109,58 @@ function ChatInput() {
     }));
   };
 
-  const handleSendMessage = async () => {
-    if (!value.trim() && !selectedFile) return;
+  const handleSendMessage = async (promptOverride = null) => {
+    const userPrompt = typeof promptOverride === "string" ? promptOverride.trim() : value.trim();
+    const fileToSend = selectedFile;
+
+    if (!userPrompt && !fileToSend) return;
     if (isLoading) return;
+
+    // 1. Immediately reset inputs and render user message in UI
+    setValue("");
+    setSelectedFile(null);
+    if (fileRef.current) fileRef.current.value = "";
 
     const executionId = `exec_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     dispatch(setCurrentExecutionId(executionId));
     dispatch(setIsLoading(true));
     dispatch(setIsStopping(false));
     dispatch(clearLiveExecution());
+    dispatch(addMessage({ role: "user", content: userPrompt }));
 
     // Create fresh AbortController for this specific research execution
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
 
-    let conversation = selectedConversation
+    // 2. Ensure conversation is created or selected
+    let conversation = selectedConversation;
     if (!conversation || !conversation._id) {
-      dispatch(setMessages([]))
-      const conv = await createConversation()
+      const conv = await createConversation();
       if (conv && conv._id) {
-        dispatch(setSelectedConversation(conv))
-        dispatch(addConversation(conv))
-        conversation = conv
+        conversation = conv;
+        dispatch(addConversation(conv));
+        dispatch(setSelectedConversation(conv));
       }
     }
 
     if (conversation && conversation._id && conversation.title === "New Chat") {
-      await updateConversation({ id: conversation._id, title: value.trim() })
-      dispatch(setConvTitle({ conversationId: conversation._id, title: value.slice(0, 40) }))
+      const newTitle = userPrompt.slice(0, 40);
+      updateConversation({ id: conversation._id, title: newTitle }).catch(console.error);
+      dispatch(setConvTitle({ conversationId: conversation._id, title: newTitle }));
     }
 
-    const formData = new FormData()
-    formData.append("prompt", value.trim())
+    const formData = new FormData();
+    formData.append("prompt", userPrompt);
     if (conversation?._id) {
-      formData.append("conversationId", conversation._id)
+      formData.append("conversationId", conversation._id);
     }
-    formData.append("agent", selectedAgent.toLowerCase())
-    formData.append("executionId", executionId)
-    if (selectedFile) {
-      formData.append("file", selectedFile)
+    formData.append("agent", selectedAgent.toLowerCase());
+    formData.append("executionId", executionId);
+    if (fileToSend) {
+      formData.append("file", fileToSend);
     }
 
-    const userPrompt = value.trim()
-    dispatch(addMessage({ role: "user", content: userPrompt }))
-    setValue("")
-    setSelectedFile(null)
-
-    const data = await sendMessage(formData, signal)
+    const data = await sendMessage(formData, signal);
 
     // If request was aborted during transit, stop processing
     if (signal.aborted) {
@@ -163,16 +168,16 @@ function ChatInput() {
       return;
     }
 
-    dispatch(setIsLoading(false))
-    dispatch(clearLiveExecution())
+    dispatch(setIsLoading(false));
+    dispatch(clearLiveExecution());
 
     if (data?.status === "cancelled" || data?.isCancelled) {
       dispatch(addMessage({
         role: "assistant",
         content: "⏹️ **Research stopped by user.**\n\nYou can refine your prompt or start a new search below."
-      }))
+      }));
     } else if (data?.answer) {
-      dispatch(setArtifacts(data.artifacts || []))
+      dispatch(setArtifacts(data.artifacts || []));
       dispatch(addMessage({
         role: "assistant",
         content: data.answer,
@@ -180,14 +185,14 @@ function ChatInput() {
         workflow: data?.workflow || null,
         metrics: data?.metrics || null,
         executionId: data?.executionId || executionId
-      }))
+      }));
     } else {
       dispatch(addMessage({
         role: "assistant",
         content: data?.error ? `⚠️ ${data.error}` : "Sorry, I encountered an issue processing your request. Please try again."
-      }))
+      }));
     }
-  }
+  };
 
   const agents = [
     {

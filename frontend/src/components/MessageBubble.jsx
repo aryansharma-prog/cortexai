@@ -340,7 +340,7 @@ function MessageBubble({
       {/* Expandable Agent Activity Panel */}
       {!isUser && hasActivityData && showActivity && (
         <div className="w-full max-w-[92vw] sm:max-w-[85%] md:max-w-[75%] mt-2">
-          <AgentActivityPanel workflow={workflow} metrics={metrics} />
+          <AgentActivityPanel workflow={workflow} executionTree={workflow?.executionTree} metrics={metrics} />
         </div>
       )}
 

@@ -94,6 +94,7 @@ export const agent = async (req, res, next) => {
         executionStrategy: "single",
         subtasks: []
       },
+      executionTree: result?.executionTree || result?.workflow?.executionTree || null,
       metrics: result?.metrics || {
         totalAgents: 1,
         completedAgents: 1,

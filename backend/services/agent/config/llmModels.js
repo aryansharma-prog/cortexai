@@ -26,14 +26,14 @@ export const MODEL_CONFIG = {
 // Primary Groq reasoning model
 export const groq = new ChatGroq({
   model: MODEL_CONFIG.groq.primary,
-  apiKey: process.env.GROQ_API_KEY,
+  apiKey: process.env.GROQ_API_KEY || "placeholder_groq_api_key",
   temperature: 0.2
 });
 
 // Google Gemini multi-modal and large context model
 export const gemini = new ChatGoogleGenerativeAI({
   model: MODEL_CONFIG.google.primary,
-  apiKey: process.env.GOOGLE_API_KEY,
+  apiKey: process.env.GOOGLE_API_KEY || "placeholder_google_api_key",
   temperature: 0.2
 });
 

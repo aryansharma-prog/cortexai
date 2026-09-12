@@ -25,13 +25,22 @@ import {
 } from "./cancellationManager.js";
 import Execution from "../models/execution.model.js";
 
+// Core Recursive Orchestration Modules
+import { ExecutionTree } from "./executionTree.js";
+import { evaluateTaskComplexity } from "./complexityEvaluator.js";
+import { recursivelyDecomposeTasks } from "./taskDecomposer.js";
+import { selectDynamicAgent } from "./dynamicAgentSelector.js";
+import { SharedMemory } from "./sharedMemory.js";
+import { evaluateTrust } from "./trustEvaluator.js";
+import { handleTaskEscalation } from "./escalationManager.js";
+import { CostTracker } from "../observability/costTracker.js";
+
 /**
  * Publishes real-time execution event to Redis and updates active state.
  */
 export const emitExecutionEvent = async (executionId, eventType, data = {}) => {
   if (!executionId) return;
 
-  // If already cancelled, do not emit further progress events except workflow_cancelled
   if (eventType !== "workflow_cancelled" && await isExecutionCancelled(executionId)) {
     return;
   }
@@ -56,14 +65,18 @@ export const emitExecutionEvent = async (executionId, eventType, data = {}) => {
     state.events.push(eventPayload);
     if (state.events.length > 50) state.events.shift();
 
-    if (data.agentId || data.subtaskId) {
-      const key = data.subtaskId || data.agentId;
+    if (data.agentId || data.subtaskId || data.nodeId) {
+      const key = data.nodeId || data.subtaskId || data.agentId;
       state.agentStatuses = state.agentStatuses || {};
       state.agentStatuses[key] = {
         ...(state.agentStatuses[key] || {}),
         ...data,
         updatedAt: new Date().toISOString()
       };
+    }
+
+    if (data.executionTree) {
+      state.executionTree = data.executionTree;
     }
 
     if (data.workflowStatus) {
@@ -77,51 +90,41 @@ export const emitExecutionEvent = async (executionId, eventType, data = {}) => {
 };
 
 /**
- * Dispatches a single subtask to its mapped agent implementation with cancellation checks.
+ * Dispatches a single leaf task to its selected agent implementation.
  */
-const executeSubtask = async (subtask, state, executionId, accumulatedOutputs) => {
-  // Pre-check cancellation
+export const executeLeafTask = async (taskNode, state, executionId, sharedMemory) => {
   await assertNotCancelled(executionId);
 
-  const { id: subtaskId, agentType, name, description, activitySummary } = subtask;
-  const agentInfo = getAgentById(agentType) || { name: name || agentType, id: agentType };
+  const subtaskId = taskNode.id;
+  const agentType = taskNode.selectedAgent || taskNode.agentType || "chat";
+  const agentInfo = getAgentById(agentType) || { name: taskNode.name || agentType, id: agentType, model: "openai/gpt-oss-120b", provider: "groq" };
 
   const startedAt = Date.now();
+  console.log(`[EXECUTION] Starting task node="${taskNode.name}" (Agent=${agentType}, Model=${agentInfo.model || 'default'})`);
 
   await emitExecutionEvent(executionId, "agent_started", {
     subtaskId,
+    nodeId: subtaskId,
     agentId: agentType,
     agentName: agentInfo.name,
+    model: agentInfo.model,
+    provider: agentInfo.provider,
     status: "running",
-    activitySummary: activitySummary || `Executing ${agentInfo.name}...`
+    activitySummary: taskNode.activitySummary || `Executing ${agentInfo.name}...`
   });
 
-  // Prepare dependency context from completed prior subtasks
-  let dependencyContext = "";
-  if (Array.isArray(subtask.dependencies) && subtask.dependencies.length > 0) {
-    dependencyContext = subtask.dependencies
-      .map(depId => {
-        const depResult = accumulatedOutputs[depId];
-        if (depResult && depResult.output) {
-          return `### Context from ${depResult.name || depId}:\n${depResult.output}`;
-        }
-        return null;
-      })
-      .filter(Boolean)
-      .join("\n\n");
-  }
+  // Pull scoped prerequisite context from SharedMemory
+  const dependencyContext = sharedMemory.getDependencyContext(taskNode.dependencies || []);
 
   const subtaskContext = {
-    ...subtask,
+    ...taskNode,
     context: dependencyContext,
-    description: description || state.prompt,
+    description: taskNode.description || state.prompt,
     executionId
   };
 
   try {
     let result = null;
-
-    // Check cancellation immediately before executing agent
     await assertNotCancelled(executionId);
 
     switch (agentType) {
@@ -133,13 +136,12 @@ const executeSubtask = async (subtask, state, executionId, accumulatedOutputs) =
         let rawSearchResults = null;
 
         try {
-          rawSearchResults = await searchTool.invoke({ query: description || state.prompt });
+          rawSearchResults = await searchTool.invoke({ query: taskNode.description || state.prompt });
         } catch (searchErr) {
           console.warn("[Search Tool Error]", searchErr.message);
-          rawSearchResults = `Search query for "${description || state.prompt}" could not be completed via live tool. Using internal knowledge base.`;
+          rawSearchResults = `Search query for "${taskNode.description || state.prompt}" could not be completed via live tool. Using internal knowledge base.`;
         }
 
-        // Post-check cancellation (handles race condition where user clicked Stop while search was pending)
         await assertNotCancelled(executionId);
 
         if (state.userId) {
@@ -184,7 +186,7 @@ const executeSubtask = async (subtask, state, executionId, accumulatedOutputs) =
       }
 
       case "coding": {
-        const codingState = await codingAgent({ ...state, prompt: description || state.prompt, executionId });
+        const codingState = await codingAgent({ ...state, prompt: taskNode.description || state.prompt, executionId });
         await assertNotCancelled(executionId);
         result = {
           agentId: "coding",
@@ -207,7 +209,7 @@ const executeSubtask = async (subtask, state, executionId, accumulatedOutputs) =
       }
 
       case "pdf": {
-        const pdfState = await pdfAgent({ ...state, prompt: description || state.prompt, executionId });
+        const pdfState = await pdfAgent({ ...state, prompt: taskNode.description || state.prompt, executionId });
         await assertNotCancelled(executionId);
         result = {
           agentId: "pdf",
@@ -226,7 +228,7 @@ const executeSubtask = async (subtask, state, executionId, accumulatedOutputs) =
       }
 
       case "ppt": {
-        const pptState = await pptAgent({ ...state, prompt: description || state.prompt, executionId });
+        const pptState = await pptAgent({ ...state, prompt: taskNode.description || state.prompt, executionId });
         await assertNotCancelled(executionId);
         result = {
           agentId: "ppt",
@@ -245,7 +247,7 @@ const executeSubtask = async (subtask, state, executionId, accumulatedOutputs) =
       }
 
       case "vision": {
-        const visionState = await visionAgent({ ...state, prompt: description || state.prompt, executionId });
+        const visionState = await visionAgent({ ...state, prompt: taskNode.description || state.prompt, executionId });
         await assertNotCancelled(executionId);
         result = {
           agentId: "vision",
@@ -265,7 +267,7 @@ const executeSubtask = async (subtask, state, executionId, accumulatedOutputs) =
       }
 
       case "pdfRag": {
-        const ragState = await pdfRag({ ...state, prompt: description || state.prompt, executionId });
+        const ragState = await pdfRag({ ...state, prompt: taskNode.description || state.prompt, executionId });
         await assertNotCancelled(executionId);
         result = {
           agentId: "pdfRag",
@@ -284,7 +286,7 @@ const executeSubtask = async (subtask, state, executionId, accumulatedOutputs) =
       }
 
       case "imageAnalyzer": {
-        const imgState = await imageAnalyzer({ ...state, prompt: description || state.prompt, executionId });
+        const imgState = await imageAnalyzer({ ...state, prompt: taskNode.description || state.prompt, executionId });
         await assertNotCancelled(executionId);
         result = {
           agentId: "imageAnalyzer",
@@ -306,7 +308,7 @@ const executeSubtask = async (subtask, state, executionId, accumulatedOutputs) =
       default: {
         const chatRes = await chatAgent({
           ...state,
-          prompt: description || state.prompt,
+          prompt: taskNode.description || state.prompt,
           searchResults: state.searchResults,
           executionId
         });
@@ -340,16 +342,35 @@ const executeSubtask = async (subtask, state, executionId, accumulatedOutputs) =
       durationMs: result?.metrics?.durationMs || durationMs
     };
 
+    // Evaluate Trust Score for the executed result
+    const trustResult = evaluateTrust(taskNode, result?.output || "", {
+      artifacts: result?.artifacts,
+      searchResults: result?.searchResults
+    });
+
+    console.log(`[EXECUTION] Task node="${taskNode.name}" completed in ${durationMs}ms with Trust=${trustResult.trustScore}/100 (${trustResult.trustClassification})`);
+
+    // Record to SharedMemory
+    sharedMemory.recordTaskOutput(subtaskId, result?.output || "", {
+      name: agentInfo.name,
+      agentId: agentType,
+      metrics: finalMetrics,
+      trust: trustResult
+    });
+
     await emitExecutionEvent(executionId, "agent_completed", {
       subtaskId,
+      nodeId: subtaskId,
       agentId: agentType,
       agentName: agentInfo.name,
       status: "completed",
-      metrics: finalMetrics
+      metrics: finalMetrics,
+      trust: trustResult
     });
 
     return {
       subtaskId,
+      nodeId: subtaskId,
       agentId: agentType,
       name: agentInfo.name,
       status: "completed",
@@ -357,14 +378,15 @@ const executeSubtask = async (subtask, state, executionId, accumulatedOutputs) =
       images: result?.images || [],
       artifacts: result?.artifacts || [],
       searchResults: result?.searchResults || null,
-      metrics: finalMetrics
+      metrics: finalMetrics,
+      trust: trustResult
     };
   } catch (err) {
     if (err instanceof ResearchCancelledError || err.name === "ResearchCancelledError") {
       throw err;
     }
 
-    console.error(`[Error executing subtask ${subtaskId}]`, err);
+    console.error(`[Error executing task ${subtaskId}]`, err);
     const durationMs = Date.now() - startedAt;
 
     const failedMetrics = {
@@ -376,17 +398,26 @@ const executeSubtask = async (subtask, state, executionId, accumulatedOutputs) =
       durationMs
     };
 
+    const trustFailed = {
+      trustScore: 10,
+      trustClassification: "LOW",
+      signals: [{ name: "execution_error", passed: false }]
+    };
+
     await emitExecutionEvent(executionId, "agent_failed", {
       subtaskId,
+      nodeId: subtaskId,
       agentId: agentType,
       agentName: agentInfo.name,
       status: "failed",
       error: err.message,
-      metrics: failedMetrics
+      metrics: failedMetrics,
+      trust: trustFailed
     });
 
     return {
       subtaskId,
+      nodeId: subtaskId,
       agentId: agentType,
       name: agentInfo.name,
       status: "failed",
@@ -394,25 +425,25 @@ const executeSubtask = async (subtask, state, executionId, accumulatedOutputs) =
       output: null,
       images: [],
       artifacts: [],
-      metrics: failedMetrics
+      metrics: failedMetrics,
+      trust: trustFailed
     };
   }
 };
 
 /**
  * Adaptive Multi-Agent Orchestrator
- * Main intelligence layer for dynamic workflow resolution, DAG execution,
- * telemetry tracking, and final synthesis.
+ * Full pipeline: Task Analyzer -> Recursive Complexity Tree -> Dynamic Agent Selection ->
+ * DAG Execution -> Shared Memory -> Trust Evaluation & Escalation -> Final Synthesis.
  */
 export const runAdaptiveOrchestration = async (state) => {
   const executionId = state.executionId || `exec_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const startTime = Date.now();
 
   try {
-    // 0. Pre-execution cancellation check
     await assertNotCancelled(executionId);
 
-    // 1. Analyze task complexity, decomposability, and dependencies
+    // 1. Initial Task Analysis & Breakdown
     const taskAnalysis = await analyzeTask({
       prompt: state.prompt,
       file: state.file,
@@ -433,19 +464,37 @@ export const runAdaptiveOrchestration = async (state) => {
       analyzerMetrics
     } = taskAnalysis;
 
-    // 2. Initialize live execution state
-    await emitExecutionEvent(executionId, "workflow_started", {
+    // 2. Initialize Execution Tree & Shared Memory & Cost Tracker
+    const tree = new ExecutionTree("root", "User Objective", state.prompt);
+    const sharedMemory = new SharedMemory(executionId);
+    const costTracker = new CostTracker(executionId);
+
+    // 3. Build & Recursively Decompose Execution Tree
+    console.log(`[ORCHESTRATOR] Building hierarchical execution tree for query: "${state.prompt.slice(0, 80)}..."`);
+    await recursivelyDecomposeTasks(subtasks, tree, "root", 1, {
+      prompt: state.prompt,
+      file: state.file,
+      userId: state.userId,
+      conversationId: state.conversationId
+    });
+
+    const leafNodes = tree.getLeafNodes();
+    console.log(`[ORCHESTRATOR] Tree generated with ${tree.nodesMap.size - 1} total tasks, ${leafNodes.length} executable leaf nodes, max depth=${tree.getMaxDepth()}.`);
+
+    // Emit live execution tree initialization event
+    await emitExecutionEvent(executionId, "tree_initialized", {
       executionId,
       taskType,
       complexity,
       executionStrategy,
       scores,
-      subtasks,
-      selectedAgents,
+      executionTree: tree.toJSON(),
+      totalTasks: tree.nodesMap.size - 1,
+      leafTasks: leafNodes.length,
+      maxDepth: tree.getMaxDepth(),
       workflowStatus: "running"
     });
 
-    const accumulatedOutputs = {};
     const executedAgentMetrics = [];
     const allImages = [];
     const allArtifacts = [];
@@ -461,145 +510,97 @@ export const runAdaptiveOrchestration = async (state) => {
       });
     }
 
-    // 3. Execution based on strategy
-    if (!requiresMultipleAgents || subtasks.length === 1) {
-      // --- Single Agent Fast Path ---
-      const singleSubtask = subtasks[0] || {
-        id: "main_task",
-        agentType: "chat",
-        name: "Reasoning Agent",
-        description: state.prompt
-      };
+    // 4. Execute Leaf Tasks Respecting Topological Dependencies
+    const remainingLeaves = [...leafNodes];
+    const completedNodeIds = new Set();
 
-      const result = await executeSubtask(singleSubtask, state, executionId, accumulatedOutputs);
+    while (remainingLeaves.length > 0) {
       await assertNotCancelled(executionId);
 
-      accumulatedOutputs[result.subtaskId] = result;
-      if (result.metrics) executedAgentMetrics.push(result.metrics);
-      if (result.images?.length) allImages.push(...result.images);
-      if (result.artifacts?.length) allArtifacts.push(...result.artifacts);
-      if (result.searchResults) accumulatedSearchResults = result.searchResults;
-
-      const totalDurationMs = Date.now() - startTime;
-      const metricsSummary = aggregateWorkflowMetrics(executedAgentMetrics);
-
-      const workflowResponse = {
-        executionId,
-        taskType,
-        complexity,
-        executionStrategy: "single",
-        scores,
-        selectedAgents,
-        subtasks: [
-          {
-            ...singleSubtask,
-            status: result.status,
-            metrics: result.metrics
-          }
-        ]
-      };
-
-      await emitExecutionEvent(executionId, "workflow_completed", {
-        executionId,
-        workflowStatus: "completed",
-        metrics: metricsSummary,
-        totalDurationMs
-      });
-
-      Execution.create({
-        executionId,
-        userId: state.userId || "anonymous",
-        conversationId: state.conversationId,
-        prompt: state.prompt,
-        taskType,
-        complexity,
-        executionStrategy: "single",
-        scores,
-        selectedAgents,
-        subtasks: workflowResponse.subtasks,
-        agentExecutions: executedAgentMetrics,
-        totalTokens: metricsSummary.totalTokens,
-        totalDurationMs,
-        estimatedCost: metricsSummary.estimatedCost,
-        success: result.status === "completed",
-        finalAnswer: result.output
-      }).catch(err => console.error("[MongoDB Execution Save Error]", err));
-
-      cleanupCancellation(executionId);
-
-      return {
-        ...state,
-        executionId,
-        aiResponse: result.output,
-        images: allImages,
-        artifacts: allArtifacts,
-        searchResults: accumulatedSearchResults,
-        taskAnalysis,
-        workflow: workflowResponse,
-        metrics: metricsSummary
-      };
-    }
-
-    // --- Multi-Agent Execution (Parallel / Sequential / Hybrid DAG) ---
-    const remainingSubtasks = [...subtasks];
-    const completedSubtaskIds = new Set();
-
-    while (remainingSubtasks.length > 0) {
-      await assertNotCancelled(executionId);
-
-      // Find subtasks whose dependencies are all completed
-      const readyBatch = remainingSubtasks.filter(st => {
-        if (!st.dependencies || st.dependencies.length === 0) return true;
-        return st.dependencies.every(depId => completedSubtaskIds.has(depId));
+      // Extract ready batch
+      const readyBatch = remainingLeaves.filter(node => {
+        if (!node.dependencies || node.dependencies.length === 0) return true;
+        return node.dependencies.every(depId => completedNodeIds.has(depId));
       });
 
       if (readyBatch.length === 0) {
-        // Break potential circular dependency
-        const fallbackSubtask = remainingSubtasks.shift();
-        readyBatch.push(fallbackSubtask);
+        // Break potential cycle
+        const fallback = remainingLeaves.shift();
+        readyBatch.push(fallback);
       } else {
-        readyBatch.forEach(st => {
-          const idx = remainingSubtasks.findIndex(r => r.id === st.id);
-          if (idx !== -1) remainingSubtasks.splice(idx, 1);
+        readyBatch.forEach(node => {
+          const idx = remainingLeaves.findIndex(r => r.id === node.id);
+          if (idx !== -1) remainingLeaves.splice(idx, 1);
         });
       }
 
       // Execute ready batch in parallel
-      const batchPromises = readyBatch.map(st =>
-        executeSubtask(st, state, executionId, accumulatedOutputs)
+      const batchPromises = readyBatch.map(node =>
+        executeLeafTask(node, state, executionId, sharedMemory)
       );
 
       const batchResults = await Promise.allSettled(batchPromises);
-
-      // Check cancellation immediately after batch resolves
       await assertNotCancelled(executionId);
 
-      batchResults.forEach((settledRes, index) => {
-        const subtaskMeta = readyBatch[index];
-        if (settledRes.status === "fulfilled") {
-          const res = settledRes.value;
-          accumulatedOutputs[res.subtaskId] = res;
-          completedSubtaskIds.add(res.subtaskId);
+      for (let i = 0; i < batchResults.length; i++) {
+        const settled = batchResults[i];
+        const leafNode = readyBatch[i];
+
+        if (settled.status === "fulfilled") {
+          const res = settled.value;
+          completedNodeIds.add(res.nodeId);
+
+          // Update tree node state
+          tree.updateNode(leafNode.id, {
+            status: res.status,
+            output: res.output,
+            metrics: res.metrics,
+            trustScore: res.trust?.trustScore,
+            trustClassification: res.trust?.trustClassification,
+            trustDetails: res.trust?.details
+          });
+
           if (res.metrics) executedAgentMetrics.push(res.metrics);
           if (res.images?.length) allImages.push(...res.images);
           if (res.artifacts?.length) allArtifacts.push(...res.artifacts);
           if (res.searchResults) accumulatedSearchResults = res.searchResults;
+
+          // 5. Trust Evaluation & Targeted Escalation
+          if (res.trust && res.trust.trustScore < 60) {
+            console.log(`[ORCHESTRATOR] Leaf task "${leafNode.name}" produced LOW TRUST (${res.trust.trustScore}). Triggering escalation...`);
+
+            await emitExecutionEvent(executionId, "node_escalation_started", {
+              nodeId: leafNode.id,
+              subtaskId: leafNode.id,
+              agentId: leafNode.selectedAgent,
+              trustScore: res.trust.trustScore,
+              status: "escalating"
+            });
+
+            const escalationResult = await handleTaskEscalation(leafNode, executeLeafTask, state, sharedMemory, costTracker);
+
+            if (escalationResult.escalated) {
+              await emitExecutionEvent(executionId, "node_escalation_completed", {
+                nodeId: leafNode.id,
+                subtaskId: leafNode.id,
+                agentId: escalationResult.strongerAgent,
+                newTrustScore: escalationResult.newTrustScore,
+                status: "completed"
+              });
+            }
+          }
         } else {
-          completedSubtaskIds.add(subtaskMeta.id);
-          const errorMetrics = {
-            agentId: subtaskMeta.agentType,
-            subtaskId: subtaskMeta.id,
-            name: subtaskMeta.name,
+          completedNodeIds.add(leafNode.id);
+          tree.updateNode(leafNode.id, {
             status: "failed",
-            error: settledRes.reason?.message || "Subtask promise rejected",
-            durationMs: 0
-          };
-          executedAgentMetrics.push(errorMetrics);
+            trustScore: 0,
+            trustClassification: "LOW"
+          });
         }
-      });
+      }
     }
 
-    // 4. Final Synthesis of multi-agent findings
+    // 6. Synthesis Stage
     await assertNotCancelled(executionId);
 
     await emitExecutionEvent(executionId, "agent_started", {
@@ -610,10 +611,15 @@ export const runAdaptiveOrchestration = async (state) => {
       activitySummary: "Synthesizing comprehensive executive report..."
     });
 
-    const agentOutputsList = Object.values(accumulatedOutputs);
+    const allOutputs = sharedMemory.getAllOutputs();
     const synthesisResult = await synthesizeMultiAgentResults({
       userPrompt: state.prompt,
-      agentOutputs: agentOutputsList,
+      agentOutputs: allOutputs.map(o => ({
+        output: o.output,
+        name: o.metadata?.name || o.taskId,
+        agentId: o.metadata?.agentId,
+        status: "completed"
+      })),
       searchResults: accumulatedSearchResults,
       taskAnalysis,
       conversationId: state.conversationId,
@@ -642,7 +648,12 @@ export const runAdaptiveOrchestration = async (state) => {
     });
 
     const totalDurationMs = Date.now() - startTime;
-    const metricsSummary = aggregateWorkflowMetrics(executedAgentMetrics);
+    const treeSummary = tree.getMetricsSummary();
+    const metricsSummary = {
+      ...aggregateWorkflowMetrics(executedAgentMetrics),
+      ...treeSummary,
+      totalDurationMs
+    };
 
     const workflowResponse = {
       executionId,
@@ -651,23 +662,41 @@ export const runAdaptiveOrchestration = async (state) => {
       executionStrategy,
       scores,
       selectedAgents,
-      subtasks: subtasks.map(st => {
-        const out = accumulatedOutputs[st.id];
-        return {
-          ...st,
-          status: out?.status || "completed",
-          metrics: out?.metrics || null
-        };
-      })
+      totalTasks: treeSummary.totalTasks,
+      leafTasks: treeSummary.leafTasks,
+      maxDepth: treeSummary.maxDepth,
+      escalations: treeSummary.escalations,
+      averageTrust: treeSummary.averageTrust,
+      executionTree: tree.toJSON(),
+      subtasks: leafNodes.map(node => ({
+        id: node.id,
+        name: node.name,
+        description: node.description,
+        agentType: node.selectedAgent || node.agentType,
+        dependencies: node.dependencies,
+        complexityScore: node.complexityScore,
+        classification: node.classification,
+        selectedAgent: node.selectedAgent,
+        model: node.model,
+        provider: node.provider,
+        selectionReason: node.selectionReason,
+        status: node.status,
+        metrics: node.metrics,
+        trustScore: node.trustScore,
+        trustClassification: node.trustClassification,
+        escalated: node.escalated
+      }))
     };
 
     await emitExecutionEvent(executionId, "workflow_completed", {
       executionId,
       workflowStatus: "completed",
       metrics: metricsSummary,
+      executionTree: workflowResponse.executionTree,
       totalDurationMs
     });
 
+    // Save Execution to MongoDB
     Execution.create({
       executionId,
       userId: state.userId || "anonymous",
@@ -683,6 +712,13 @@ export const runAdaptiveOrchestration = async (state) => {
       totalTokens: metricsSummary.totalTokens,
       totalDurationMs,
       estimatedCost: metricsSummary.estimatedCost,
+      actualCost: metricsSummary.actualCost,
+      totalTasks: treeSummary.totalTasks,
+      leafTasks: treeSummary.leafTasks,
+      maxDepth: treeSummary.maxDepth,
+      escalations: treeSummary.escalations,
+      averageTrust: treeSummary.averageTrust,
+      executionTree: workflowResponse.executionTree,
       success: true,
       finalAnswer: synthesisResult.output
     }).catch(err => console.error("[MongoDB Execution Save Error]", err));
@@ -698,6 +734,7 @@ export const runAdaptiveOrchestration = async (state) => {
       searchResults: accumulatedSearchResults,
       taskAnalysis,
       workflow: workflowResponse,
+      executionTree: workflowResponse.executionTree,
       metrics: metricsSummary
     };
   } catch (error) {

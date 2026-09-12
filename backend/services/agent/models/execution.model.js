@@ -11,7 +11,7 @@ const agentExecutionSchema = new mongoose.Schema({
   totalTokens: { type: Number, default: null },
   durationMs: { type: Number, default: 0 },
   estimatedCost: { type: Number, default: null },
-  status: { type: String, enum: ["pending", "running", "completed", "failed", "skipped"], default: "completed" },
+  status: { type: String, enum: ["pending", "running", "completed", "failed", "skipped", "escalated"], default: "completed" },
   startedAt: { type: Date },
   completedAt: { type: Date },
   error: { type: String, default: null }
@@ -25,6 +25,15 @@ const subtaskSchema = new mongoose.Schema({
   dependencies: [{ type: String }],
   activitySummary: { type: String },
   status: { type: String, default: "completed" },
+  complexityScore: { type: Number },
+  classification: { type: String },
+  selectedAgent: { type: String },
+  model: { type: String },
+  provider: { type: String },
+  selectionReason: { type: String },
+  trustScore: { type: Number },
+  trustClassification: { type: String },
+  escalated: { type: Boolean, default: false },
   metrics: { type: mongoose.Schema.Types.Mixed, default: null }
 }, { _id: false });
 
@@ -54,12 +63,11 @@ const executionSchema = new mongoose.Schema({
   },
   complexity: {
     type: String,
-    enum: ["low", "medium", "high"],
+    enum: ["low", "medium", "high", "EASY", "MEDIUM", "COMPLEX", "cancelled", "fallback"],
     default: "low"
   },
   executionStrategy: {
     type: String,
-    enum: ["single", "parallel", "sequential", "hybrid"],
     default: "single"
   },
   scores: {
@@ -71,10 +79,17 @@ const executionSchema = new mongoose.Schema({
   },
   selectedAgents: [{ type: String }],
   subtasks: [subtaskSchema],
+  executionTree: { type: mongoose.Schema.Types.Mixed, default: null },
+  totalTasks: { type: Number, default: 1 },
+  leafTasks: { type: Number, default: 1 },
+  maxDepth: { type: Number, default: 1 },
+  escalations: { type: Number, default: 0 },
+  averageTrust: { type: Number, default: null },
   agentExecutions: [agentExecutionSchema],
   totalTokens: { type: Number, default: null },
   totalDurationMs: { type: Number, default: 0 },
   estimatedCost: { type: Number, default: null },
+  actualCost: { type: Number, default: null },
   success: { type: Boolean, default: true },
   finalAnswer: { type: String }
 }, {

@@ -51,7 +51,12 @@ app.use("/api/agent", protect, proxyWithHeader(process.env.AGENT_SERVICE || "htt
 app.use("/api/billing", protect, proxyWithHeader(process.env.BILLING_SERVICE || "http://localhost:8004"))
 app.get("/api/me", protect, getCurrentUser)
 app.get("/", (req, res) => {
-  res.json({ message: "hello from gateway v5", status: "online" })
+  res.json({
+    message: "hello from gateway v7",
+    status: "online",
+    groqModel: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
+    googleModel: process.env.GOOGLE_MODEL || "gemini-3.6-flash"
+  })
 })
 
 app.listen(port, () => {

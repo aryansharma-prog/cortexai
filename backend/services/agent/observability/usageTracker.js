@@ -114,6 +114,13 @@ export const invokeWithTracking = async (llm, input, optionsOrModelName = {}, ma
   } catch (err) {
     success = false;
     error = err.message || String(err);
+
+    // Extract HTTP status and provider error details safely without leaking API keys
+    const status = err?.status || err?.statusCode || err?.response?.status || 500;
+    const providerErrorMessage = err?.error?.message || err?.response?.data?.error?.message || err?.message || String(err);
+
+    console.error(`[LLM_ERROR] Service: agent-service | Provider: ${provider} | Model: ${modelName} | Status: ${status} | Error: ${providerErrorMessage}`);
+
     throw err;
   } finally {
     const endTime = Date.now();

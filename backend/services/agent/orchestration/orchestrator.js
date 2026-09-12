@@ -2,6 +2,7 @@ import redis from "../../../shared/redis/redis.js";
 import { analyzeTask } from "./taskAnalyzer.js";
 import { getAgentById } from "./agentRegistry.js";
 import { searchTool } from "../config/tavily.js";
+import { MODEL_CONFIG } from "../config/llmModels.js";
 import { chatAgent } from "../agents/chat.agent.js";
 import { codingAgent } from "../agents/coding.agent.js";
 import { analysisAgent } from "../agents/analysis.agent.js";
@@ -215,7 +216,7 @@ const executeSubtask = async (subtask, state, executionId, accumulatedOutputs) =
           output: pdfState.aiResponse,
           metrics: {
             agentId: "pdf",
-            model: "openai/gpt-oss-120b",
+            model: MODEL_CONFIG.groq.primary,
             provider: "groq",
             durationMs: Date.now() - startedAt,
             status: "completed"
@@ -234,7 +235,7 @@ const executeSubtask = async (subtask, state, executionId, accumulatedOutputs) =
           output: pptState.aiResponse,
           metrics: {
             agentId: "ppt",
-            model: "openai/gpt-oss-120b",
+            model: MODEL_CONFIG.groq.primary,
             provider: "groq",
             durationMs: Date.now() - startedAt,
             status: "completed"
@@ -273,7 +274,7 @@ const executeSubtask = async (subtask, state, executionId, accumulatedOutputs) =
           output: ragState.aiResponse,
           metrics: {
             agentId: "pdfRag",
-            model: "gemini-2.5-flash",
+            model: MODEL_CONFIG.google.primary,
             provider: "google",
             durationMs: Date.now() - startedAt,
             status: "completed"
@@ -292,7 +293,7 @@ const executeSubtask = async (subtask, state, executionId, accumulatedOutputs) =
           output: imgState.aiResponse,
           metrics: {
             agentId: "imageAnalyzer",
-            model: "gemini-2.5-flash",
+            model: MODEL_CONFIG.google.primary,
             provider: "google",
             durationMs: Date.now() - startedAt,
             status: "completed"
@@ -317,7 +318,7 @@ const executeSubtask = async (subtask, state, executionId, accumulatedOutputs) =
           output: chatRes.aiResponse,
           metrics: {
             agentId: "chat",
-            model: "openai/gpt-oss-120b",
+            model: MODEL_CONFIG.groq.primary,
             provider: "groq",
             durationMs: Date.now() - startedAt,
             status: "completed"

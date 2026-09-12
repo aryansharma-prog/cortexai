@@ -8,10 +8,25 @@ export const MODEL_PRICING = {
     outputPerMillion: 0.60,
     provider: "groq"
   },
+  "openai/gpt-oss-20b": {
+    inputPerMillion: 0.08,
+    outputPerMillion: 0.30,
+    provider: "groq"
+  },
+  "qwen/qwen3.8-27b": {
+    inputPerMillion: 0.10,
+    outputPerMillion: 0.40,
+    provider: "groq"
+  },
   "llama-3.3-70b-versatile": {
     inputPerMillion: 0.59,
     outputPerMillion: 0.79,
     provider: "groq"
+  },
+  "gemini-3.6-flash": {
+    inputPerMillion: 0.075,
+    outputPerMillion: 0.30,
+    provider: "google"
   },
   "gemini-2.5-flash": {
     inputPerMillion: 0.075,

@@ -4,24 +4,48 @@ import { ChatGroq } from "@langchain/groq";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatOpenRouter } from "@langchain/openrouter";
 
-// Primary ultra-fast Groq reasoning model
-const groq = new ChatGroq({
-  model: "llama-3.3-70b-versatile",
+/**
+ * Centralized Model Registry Configuration
+ * Supports environment overrides with validated, active default models.
+ */
+export const MODEL_CONFIG = {
+  groq: {
+    primary: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
+    fallback: "openai/gpt-oss-20b",
+    fast: "qwen/qwen3.8-27b"
+  },
+  google: {
+    primary: process.env.GOOGLE_MODEL || "gemini-3.6-flash",
+    fallback: "gemini-3.6-flash"
+  },
+  openrouter: {
+    primary: process.env.OPENROUTER_MODEL || "deepseek/deepseek-chat"
+  }
+};
+
+// Primary Groq reasoning model
+export const groq = new ChatGroq({
+  model: MODEL_CONFIG.groq.primary,
+  apiKey: process.env.GROQ_API_KEY,
   temperature: 0.2
 });
 
 // Google Gemini multi-modal and large context model
-const gemini = new ChatGoogleGenerativeAI({
-  model: "gemini-1.5-flash",
+export const gemini = new ChatGoogleGenerativeAI({
+  model: MODEL_CONFIG.google.primary,
+  apiKey: process.env.GOOGLE_API_KEY,
   temperature: 0.2
 });
 
 // Configure OpenRouter with fallback safety if key is placeholder
-const isOpenRouterConfigured = process.env.OPENROUTER_API_KEY && !process.env.OPENROUTER_API_KEY.includes("add your");
+const isOpenRouterConfigured = process.env.OPENROUTER_API_KEY && 
+  !process.env.OPENROUTER_API_KEY.includes("add your") && 
+  !process.env.OPENROUTER_API_KEY.includes("your_");
 
-const openrouter = isOpenRouterConfigured
+export const openrouter = isOpenRouterConfigured
   ? new ChatOpenRouter({
-      model: "deepseek/deepseek-chat",
+      model: MODEL_CONFIG.openrouter.primary,
+      apiKey: process.env.OPENROUTER_API_KEY,
       temperature: 0,
       maxTokens: 2500
     })
@@ -65,27 +89,27 @@ export const getModel = async (agent) => {
  */
 export const getModelWithMeta = async (agent) => {
   const llm = await getModel(agent);
-  let modelName = "llama-3.3-70b-versatile";
+  let modelName = MODEL_CONFIG.groq.primary;
   let provider = "groq";
 
   switch (agent) {
     case "coding":
       if (isOpenRouterConfigured) {
-        modelName = "deepseek/deepseek-chat";
+        modelName = MODEL_CONFIG.openrouter.primary;
         provider = "openrouter";
       } else {
-        modelName = "llama-3.3-70b-versatile";
+        modelName = MODEL_CONFIG.groq.primary;
         provider = "groq";
       }
       break;
     case "imageAnalyzer":
     case "pdf-rag":
     case "pdfRag":
-      modelName = "gemini-1.5-flash";
+      modelName = MODEL_CONFIG.google.primary;
       provider = "google";
       break;
     default:
-      modelName = "llama-3.3-70b-versatile";
+      modelName = MODEL_CONFIG.groq.primary;
       provider = "groq";
       break;
   }
@@ -103,7 +127,7 @@ export const getModelWithMeta = async (agent) => {
 export const getFallbackModelWithMeta = async () => {
   return {
     llm: gemini,
-    modelName: "gemini-1.5-flash",
+    modelName: MODEL_CONFIG.google.primary,
     provider: "google"
   };
 };

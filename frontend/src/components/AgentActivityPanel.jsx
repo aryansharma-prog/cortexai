@@ -202,8 +202,8 @@ export default function AgentActivityPanel({ workflow = {}, metrics = {} }) {
       </div>
 
       {/* Agents Execution Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+      <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <table className="w-full min-w-[460px] text-left border-collapse">
           <thead>
             <tr className="border-b border-white/[0.06] text-[10px] uppercase font-semibold text-slate-500 bg-white/[0.01]">
               <th className="py-2.5 px-4">Agent / Subtask</th>
@@ -314,7 +314,7 @@ export default function AgentActivityPanel({ workflow = {}, metrics = {} }) {
             <BarChart3 size={12} className="text-indigo-400" />
             <span>Task Decomposition & Research Metrics (1-10 Scale)</span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-center">
             <div className="p-2 rounded-lg bg-white/[0.03] border border-white/[0.05]">
               <div className="text-[10px] text-slate-500">Complexity</div>
               <div className="text-[14px] font-bold text-indigo-400 font-mono">{scores?.complexityScore ?? 1}/10</div>

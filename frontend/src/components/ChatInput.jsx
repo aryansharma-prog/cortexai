@@ -233,10 +233,10 @@ function ChatInput() {
   ]
 
   return (
-    <div className='w-full overflow-hidden px-3 md:px-5 py-4 border-t border-white/[0.06] bg-[#0d0f14]'>
-      <div className='flex flex-col gap-2 bg-white/[0.03] border border-white/[0.07] rounded-2xl px-4 pt-3.5 pb-3'>
+    <div className='w-full overflow-hidden px-2.5 sm:px-4 md:px-5 py-2.5 sm:py-3.5 border-t border-white/[0.06] bg-[#0d0f14]'>
+      <div className='flex flex-col gap-2 bg-white/[0.03] border border-white/[0.07] rounded-2xl px-3 sm:px-4 pt-3 pb-2.5'>
 
-        <div className='flex w-[80%] gap-2 pr-2 flex-wrap'>
+        <div className='flex w-full items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
           {agents.map((agent) => {
             const isActive = selectedAgent === agent.label
             const Icon = agent.icon
@@ -245,18 +245,19 @@ function ChatInput() {
                 key={agent.id}
                 onClick={() => setSelectedAgent(agent.label)}
                 className={`
-            flex-shrink-0
+            shrink-0
             cursor-pointer
             inline-flex
             items-center
             gap-1.5
-            px-3
-            py-2
+            px-2.5 sm:px-3
+            py-1.5 sm:py-2
             rounded-full
-            text-xs
+            text-[11px] sm:text-xs
             font-medium
             border
             transition-all
+            whitespace-nowrap
 
             ${isActive
                     ? "bg-gradient-to-r from-indigo-500 to-violet-600 text-white border-transparent shadow-[0_1px_8px_rgba(99,102,241,.35)]"
@@ -264,7 +265,7 @@ function ChatInput() {
                   }
           `}>
 
-                <Icon size={14}
+                <Icon size={13}
                   className={
                     isActive
                       ? "text-white"

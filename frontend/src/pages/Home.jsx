@@ -81,14 +81,14 @@ function Home() {
     }
 
     return (
-        <div className='h-screen flex bg-[#0d0f14] text-white overflow-hidden'>
+        <div className='h-screen h-[100dvh] flex bg-[#0d0f14] text-white overflow-hidden'>
             <SideBar />
             <ChatArea />
             <Artifact />
 
             {!userData && (
-                <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur'>
-                    <div className='w-[360px] bg-[#13151c] border border-white/[0.08] rounded-2xl p-7 flex flex-col gap-5 shadow-2xl'>
+                <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur p-4'>
+                    <div className='w-full max-w-[360px] bg-[#13151c] border border-white/[0.08] rounded-2xl p-5 sm:p-7 flex flex-col gap-5 shadow-2xl'>
                         <div className='flex flex-col gap-1.5'>
                             <h2 className='text-[18px] font-semibold text-slate-100 tracking-tight'>Welcome to CortexAI</h2>
                             <p className='text-[13px] text-slate-400 leading-relaxed'>

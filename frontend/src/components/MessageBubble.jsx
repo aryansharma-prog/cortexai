@@ -105,8 +105,8 @@ function MessageBubble({
     <div className={`flex flex-col ${isUser ? "items-end" : "items-start"} group relative mb-3`}>
       <div
         onClick={handleBubbleClick}
-        className={`w-fit max-w-[92vw] md:max-w-[75%]
-  px-4 py-3 rounded-2xl
+        className={`w-fit max-w-[92vw] sm:max-w-[85%] md:max-w-[75%]
+  px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl
   break-words overflow-hidden
   leading-relaxed relative transition-all duration-150
         ${isUser
@@ -135,7 +135,7 @@ function MessageBubble({
 
         {/* Generated or Attached Images */}
         {images.length > 0 && (
-          <div className='flex flex-wrap gap-3 my-3'>
+          <div className='flex flex-wrap gap-2.5 my-3'>
             {images.map((img, i) => (
               <img
                 key={i}
@@ -146,7 +146,7 @@ function MessageBubble({
                 }}
                 loading="lazy"
                 onError={(e) => e.currentTarget.remove()}
-                className="w-48 h-36 rounded-xl object-cover border border-white/15 cursor-zoom-in hover:opacity-95 hover:scale-[1.01] transition-all shadow-lg"
+                className="w-36 h-28 sm:w-48 sm:h-36 max-w-full rounded-xl object-cover border border-white/15 cursor-zoom-in hover:opacity-95 hover:scale-[1.01] transition-all shadow-lg"
               />
             ))}
           </div>
@@ -323,8 +323,11 @@ function MessageBubble({
               >
                 <Activity size={12} className="text-indigo-400" />
                 <span>Agent Activity</span>
-                <span className="text-[10.5px] text-slate-400 font-mono">
+                <span className="hidden sm:inline text-[10.5px] text-slate-400 font-mono">
                   ({totalAgents} agent{totalAgents > 1 ? "s" : ""}{totalTokens ? ` · ${totalTokens}` : ""}{duration ? ` · ${duration}` : ""})
+                </span>
+                <span className="sm:hidden text-[10.5px] text-slate-400 font-mono">
+                  ({totalAgents} ag)
                 </span>
                 {showActivity ? <ChevronUp size={12} className="text-slate-400" /> : <ChevronDown size={12} className="text-slate-400" />}
               </button>
@@ -336,23 +339,23 @@ function MessageBubble({
 
       {/* Expandable Agent Activity Panel */}
       {!isUser && hasActivityData && showActivity && (
-        <div className="w-full max-w-[92vw] md:max-w-[75%] mt-2">
+        <div className="w-full max-w-[92vw] sm:max-w-[85%] md:max-w-[75%] mt-2">
           <AgentActivityPanel workflow={workflow} metrics={metrics} />
         </div>
       )}
 
       {/* Fullscreen LightBox */}
       {lightBox && (
-        <div className='fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-6'>
+        <div className='fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6'>
           <button
-            className='absolute top-5 right-5 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-2.5 transition cursor-pointer'
+            className='absolute top-4 right-4 sm:top-5 sm:right-5 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-2 sm:p-2.5 transition cursor-pointer'
             onClick={() => setLightBox(null)}
           >
             <X size={20} />
           </button>
           <img
             src={lightBox}
-            className="max-w-[90vw] max-h-[85vh] rounded-2xl border border-white/15 shadow-2xl object-contain"
+            className="max-w-[95vw] max-h-[85vh] rounded-2xl border border-white/15 shadow-2xl object-contain"
           />
         </div>
       )}

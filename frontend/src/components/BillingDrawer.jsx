@@ -51,11 +51,11 @@ function BillingDrawer({ open, onClose }) {
                     animate={{ x: 0 }}
                     exit={{ x: "100%" }}
                     transition={{ duration: .25 }}
-                    className="fixed right-0 top-0 z-50 h-screen w-[380px] bg-[#0f1117] border-l border-white/10 shadow-2xl flex flex-col"
+                    className="fixed right-0 top-0 z-50 h-screen w-full max-w-[380px] sm:w-[380px] bg-[#0f1117] border-l border-white/10 shadow-2xl flex flex-col"
 
                 >
 
-                    <div className='flex items-center justify-between p-5 border-b border-white/10'>
+                    <div className='flex items-center justify-between p-4 sm:p-5 border-b border-white/10'>
                         <div>
                             <div className='text-white text-lg font-semibold'>
                                 Billing
@@ -64,14 +64,14 @@ function BillingDrawer({ open, onClose }) {
                                 Plans & Credits
                             </div>
                         </div>
-                        <button onClick={onClose} className="w-9 h-9 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center"
+                        <button onClick={onClose} className="w-9 h-9 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center cursor-pointer"
                         >
                             <X size={18} className="text-slate-300" />
                         </button>
                     </div>
 
 
-                    <div className='p-5'>
+                    <div className='p-4 sm:p-5'>
                         <div className='rounded-xl bg-white/[0.04] border border-white/10 p-4'>
                             <div className='flex justify-between items-center'>
                                 <div>

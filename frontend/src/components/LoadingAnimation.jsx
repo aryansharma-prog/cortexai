@@ -46,8 +46,8 @@ function LoadingAnimation({ currentActivity = null }) {
     const activeStepData = STEPS[currentStep]
 
     return (
-        <div className='flex flex-col gap-2.5 max-w-[92vw] md:max-w-[70%] py-2'>
-            <div className='flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-[#13151f]/90 border border-white/[0.08] shadow-lg'>
+        <div className='flex flex-col gap-2.5 max-w-[92vw] sm:max-w-[85%] md:max-w-[70%] py-2'>
+            <div className='flex items-center justify-between gap-2.5 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl bg-[#13151f]/90 border border-white/[0.08] shadow-lg'>
                 <div className='flex items-center gap-3 min-w-0 flex-1'>
                     <div className='relative w-7 h-7 flex items-center justify-center shrink-0'>
                         {[0, 0.4, 0.8].map((delay, i) => (

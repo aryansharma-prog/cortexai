@@ -2,7 +2,7 @@ import fs from "fs";
 import { PDFParse } from "pdf-parse";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { vectorStore } from "../config/vectorDb.js";
-import { getModel } from "../config/llmModels.js";
+import { getModelWithMeta } from "../config/llmModels.js";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { deductCredits } from "../utils/deductCredits.js";
 import { checkAgentLimit } from "../config/agentLimit.js";
@@ -72,7 +72,7 @@ export const pdfRag = async (state) => {
       context = topDocs.join("\n\n") || docs.slice(0, 4).map((d) => d.pageContent).join("\n\n");
     }
 
-    const { model, modelKey } = getModel("pdf-rag");
+    const { llm, modelName, provider } = await getModelWithMeta("pdfRag");
     const messages = [
       new SystemMessage(`You are CortexAI PDF Assistant.
 Rules:
@@ -86,7 +86,13 @@ User Question:
 ${state.prompt}`)
     ];
 
-    const { response, usage } = await invokeWithTracking(model, messages, modelKey, "pdfRagAgent");
+    const { response, metrics } = await invokeWithTracking(llm, messages, {
+      agentId: "pdfRag",
+      modelName,
+      provider,
+      conversationId: state.conversationId,
+      userId: state.userId
+    });
 
     if (state.userId) {
       await deductCredits(state.userId, "pdf");
@@ -96,7 +102,7 @@ ${state.prompt}`)
       ...state,
       metrics: {
         ...(state.metrics || {}),
-        tokens: usage?.totalTokens || null
+        tokens: metrics?.totalTokens || null
       },
       aiResponse: response.content
     };

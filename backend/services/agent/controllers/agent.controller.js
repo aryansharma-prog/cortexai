@@ -21,6 +21,8 @@ export const agent = async (req, res, next) => {
     const file = req.file;
     const userId = req.headers["x-user-id"] || "anonymous";
 
+    console.log(`[AGENT] Request received: agent=${selectedAgent || "auto"}, userId=${userId}, executionId=${executionId}`);
+
     if (conversationId && conversationId !== "undefined") {
       await axios.post(`${process.env.CHAT_SERVICE}/save-message`, {
         conversationId,
@@ -37,6 +39,8 @@ export const agent = async (req, res, next) => {
       file,
       executionId
     });
+
+    console.log(`[AGENT] Graph execution finished successfully for ${executionId}`);
 
     const wasCancelled = (result?.status === "cancelled") || (await isExecutionCancelled(executionId));
 

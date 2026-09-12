@@ -40,10 +40,11 @@ export const login = async (req, res) => {
         await redis.set(`user-session-${user._id}`, sessionId, "EX", 7 * 24 * 60 * 60);
         await redis.set(`session-${sessionId}`, JSON.stringify(sessionData), "EX", 7 * 24 * 60 * 60);
 
+        const isProduction = process.env.NODE_ENV === "production" || true;
         res.cookie("session", sessionId, {
             httpOnly: true,
-            secure: false,
-            sameSite: "lax",
+            secure: isProduction,
+            sameSite: "none",
             path: "/",
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
@@ -63,7 +64,11 @@ export const logOut = async (req, res) => {
             await redis.del(`session-${sessionId}`);
         }
 
-        res.clearCookie("session", { path: "/" });
+        res.clearCookie("session", {
+            path: "/",
+            sameSite: "none",
+            secure: true
+        });
         return res.status(200).json({ message: "logout successfully" });
     } catch (error) {
         return res.status(500).json({ message: `logout error ${error}` });

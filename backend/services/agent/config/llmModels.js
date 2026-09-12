@@ -4,12 +4,16 @@ import { ChatGroq } from "@langchain/groq";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatOpenRouter } from "@langchain/openrouter";
 
+// Primary ultra-fast Groq reasoning model
 const groq = new ChatGroq({
-  model: "openai/gpt-oss-120b"
+  model: "llama-3.3-70b-versatile",
+  temperature: 0.2
 });
 
+// Google Gemini multi-modal and large context model
 const gemini = new ChatGoogleGenerativeAI({
-  model: "gemini-3.6-flash"
+  model: "gemini-1.5-flash",
+  temperature: 0.2
 });
 
 // Configure OpenRouter with fallback safety if key is placeholder
@@ -48,6 +52,7 @@ export const getModel = async (agent) => {
     case "vision":
       return groq;
     case "pdf-rag":
+    case "pdfRag":
       return gemini;
     default:
       return groq;
@@ -60,7 +65,7 @@ export const getModel = async (agent) => {
  */
 export const getModelWithMeta = async (agent) => {
   const llm = await getModel(agent);
-  let modelName = "openai/gpt-oss-120b";
+  let modelName = "llama-3.3-70b-versatile";
   let provider = "groq";
 
   switch (agent) {
@@ -69,17 +74,18 @@ export const getModelWithMeta = async (agent) => {
         modelName = "deepseek/deepseek-chat";
         provider = "openrouter";
       } else {
-        modelName = "openai/gpt-oss-120b";
+        modelName = "llama-3.3-70b-versatile";
         provider = "groq";
       }
       break;
     case "imageAnalyzer":
     case "pdf-rag":
-      modelName = "gemini-3.6-flash";
+    case "pdfRag":
+      modelName = "gemini-1.5-flash";
       provider = "google";
       break;
     default:
-      modelName = "openai/gpt-oss-120b";
+      modelName = "llama-3.3-70b-versatile";
       provider = "groq";
       break;
   }
@@ -97,7 +103,7 @@ export const getModelWithMeta = async (agent) => {
 export const getFallbackModelWithMeta = async () => {
   return {
     llm: gemini,
-    modelName: "gemini-3.6-flash",
+    modelName: "gemini-1.5-flash",
     provider: "google"
   };
 };

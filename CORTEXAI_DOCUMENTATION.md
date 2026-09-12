@@ -4,36 +4,84 @@
 
 ## 📌 1. Architectural Overview & System Design
 
-**CortexAI** is a distributed, multi-agent AI intelligence platform designed to surpass traditional single-prompt conversational models. It evaluates task complexity, dynamically creates Directed Acyclic Graphs (DAG), executes specialized domain agents in parallel and sequential chains, and synthesizes outputs into executive-grade reports with interactive artifacts.
+**CortexAI** is a distributed, recursive, adaptive multi-agent AI intelligence platform engineered to surpass traditional single-prompt conversational models. It evaluates task complexity, dynamically creates hierarchical Directed Acyclic Graphs (DAG), recursively decomposes complex subtasks into atomic units, selects the cheapest capable agent for each leaf task, executes them with shared incremental memory, evaluates measurable trust, selectively escalates low-trust results, and synthesizes structured executive outputs with live metrics and interactive code artifacts.
 
 ```
-                               ┌───────────────────────────────────────────┐
-                               │   React 19 + Vite 8 Frontend (SPA)       │
-                               │   Tailwind CSS v4 + Monaco Editor + Redux │
-                               └─────────────────────┬─────────────────────┘
-                                                     │ HTTP / SSE / REST
-                                                     ▼
-                               ┌───────────────────────────────────────────┐
-                               │        API Gateway (Port: 8000)           │
-                               │    Dual Authentication (Cookie + Bearer)  │
-                               └───────┬──────────┬──────────┬─────────────┘
-                                       │          │          │
-                 ┌─────────────────────┼──────────┴──────────┼─────────────────────┐
-                 ▼                     ▼                     ▼                     ▼
-       ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-       │   Auth Service   │  │   Chat Service   │  │  Agent Service   │  │ Billing Service  │
-       │   (Port: 8001)   │  │   (Port: 8002)   │  │   (Port: 8003)   │  │   (Port: 8004)   │
-       │ Firebase + Mongo │  │ Conversations    │  │ Orchestrator DAG │  │ Razorpay Credits │
-       └─────────┬────────┘  └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘
-                 │                    │                     │                     │
-                 └────────────────────┴──────────┬──────────┴─────────────────────┘
-                                                 │
-                                 ┌───────────────┴───────────────┐
-                                 │   Distributed Infrastructure  │
-                                 │   • Redis (Pub/Sub + Cache)   │
-                                 │   • MongoDB Atlas (Storage)   │
-                                 │   • Qdrant (Vector Database)  │
-                                 └───────────────────────────────┘
+                                 USER QUERY / ATTACHMENT
+                                            │
+                                            ▼
+                                   ┌─────────────────┐
+                                   │  Task Analyzer  │
+                                   └────────┬────────┘
+                                            │
+                                            ▼
+                               ┌─────────────────────────┐
+                               │ Initial Task Breakdown  │
+                               └────────────┬────────────┘
+                                            │
+                                            ▼
+                               ┌─────────────────────────┐
+                               │  Complexity Evaluator   │
+                               │ (0.3D+0.2S+0.2R+0.15C+  │
+                               │         0.15U)          │
+                               └────────────┬────────────┘
+                                            │
+               ┌────────────────────────────┼────────────────────────────┐
+               ▼                            ▼                            ▼
+        ┌──────────────┐             ┌──────────────┐             ┌──────────────┐
+        │  EASY (0-39) │             │ MEDIUM (40-69│             │COMPLEX (70+) │
+        │  (Leaf Node) │             │  (Leaf Node) │             │              │
+        └──────┬───────┘             └──────┬───────┘             └──────┬───────┘
+               │                            │                            │
+               │                            │              ┌─────────────┴─────────────┐
+               │                            │              ▼                           ▼
+               │                            │     Stop Condition Met?          Decompose Task
+               │                            │     • Max depth (3) reached             │
+               │                            │     • Atomic / non-decomposable         ▼
+               │                            │     • Benefit < Overhead       Child Subtasks
+               │                            │              │                          │
+               │                            │              ▼                          ▼
+               │                            │     Treat as Leaf Node        Re-evaluate Complexity
+               │                            │              │                          │
+               └────────────────────────────┼──────────────┴──────────────────────────┘
+                                            │
+                                            ▼
+                               ┌─────────────────────────┐
+                               │ Dynamic Agent Selector  │
+                               │  (Cheapest Capable)     │
+                               └────────────┬────────────┘
+                                            │
+                                            ▼
+                               ┌─────────────────────────┐
+                               │ Parallel/DAG Execution  │
+                               │ with Shared Memory & SSE│
+                               └────────────┬────────────┘
+                                            │
+                                            ▼
+                               ┌─────────────────────────┐
+                               │    Trust Evaluation     │
+                               │  (Measurable Evidence)  │
+                               └────────────┬────────────┘
+                                            │
+                             ┌──────────────┴──────────────┐
+                             ▼                             ▼
+                    ┌─────────────────┐           ┌─────────────────┐
+                    │  HIGH / MEDIUM  │           │ LOW TRUST (<60) │
+                    │   (Trust ≥ 60)  │           └────────┬────────┘
+                    └────────┬────────┘                    │
+                             │                             ▼
+                             │                    ┌─────────────────┐
+                             │                    │Escalation / Refine
+                             │                    │to Stronger Agent│
+                             │                    └────────┬────────┘
+                             │                             │
+                             └──────────────┬──────────────┘
+                                            │
+                                            ▼
+                               ┌─────────────────────────┐
+                               │ Executive Synthesizer   │
+                               │ & Execution Tree Output │
+                               └─────────────────────────┘
 ```
 
 ---
@@ -45,249 +93,230 @@
 | **API Gateway** | `8000` | Reverse proxy, request forwarding, CORS, dual-session authentication check, public asset routing | Redis Session Cache |
 | **Auth Service** | `8001` | Firebase token verification, user synchronization, session creation/destruction | MongoDB, Firebase Admin, Redis |
 | **Chat Service** | `8002` | Conversation threads, message persistence, history retrieval | MongoDB (`conversations`, `messages`) |
-| **Agent Service** | `8003` | Task analysis, DAG orchestration, agent dispatching, RAG, PDF/PPT synthesis, SSE streaming, cancellation manager | Groq, Gemini, OpenRouter, Tavily, Qdrant, Redis, S3 |
+| **Agent Service** | `8003` | Task analysis, recursive DAG orchestration, dynamic agent selection, RAG, PDF/PPT synthesis, SSE streaming, cancellation manager | Groq, Gemini, OpenRouter, Tavily, Qdrant, Redis, S3 |
 | **Billing Service**| `8004` | Razorpay order generation, webhook verification, credit deduction, subscription management | MongoDB (`users`, `transactions`), Razorpay SDK |
 
 ---
 
-## ⚙️ 3. Complete Inventory of Implemented Algorithms
+## ⚙️ 3. Complete Inventory of All Implemented Algorithms
 
 ---
 
-### 🔬 Algorithm 1: Heuristic Fast-Path Query Classification
-* **File:** `backend/services/agent/orchestration/taskAnalyzer.js`
-* **Goal:** Eliminate unnecessary LLM latency and token cost for deterministic, simple, or file-driven tasks.
+### 🔬 Algorithm 1: Hybrid Complexity Evaluation Engine
+* **File:** [`backend/services/agent/orchestration/complexityEvaluator.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/orchestration/complexityEvaluator.js)
+* **Goal:** Calculate an objective, multi-factor numerical complexity score ($0 - 100$) for every task node using measurable signals and domain heuristics.
 
-#### Mathematical / Logic Flow:
-Given input prompt $P$ and uploaded file metadata $F$:
-1. **File Type Filter**:
-   $$\text{If } F \neq \emptyset \land F.\text{mimetype} = \text{'application/pdf'} \implies \text{Route to } \text{pdfRag} \text{ (Complexity: 4, Strategy: Single)}$$
-   $$\text{If } F \neq \emptyset \land F.\text{mimetype} \in \{\text{'image/*'}\} \implies \text{Route to } \text{imageAnalyzer} \text{ (Complexity: 4, Strategy: Single)}$$
-2. **Conversational Greeting Filter**:
-   $$\text{Let } G = \{\text{'hi'}, \text{'hello'}, \text{'hey'}, \dots\}$$
-   $$\text{If } \text{lower}(P) \in G \lor (|P| \le 15 \land \text{lower}(P) \text{ starts with 'hi'}) \implies \text{Route to } \text{chat} \text{ (Complexity: 1)}$$
-3. **Definition / Explanation Regex Filter**:
-   $$\text{Regex: } \text{/}\text{\textasciicircum}(what\ is|what\ are|define|explain|who\ is|how\ does|why\ is)\backslash s+([a-zA-Z0-9\_\-\backslash s]\{2,30\})\backslash ?\$\text{/i}$$
-   If matches and contains no comparison/research indicators $\implies \text{Route to } \text{chat} \text{ (Complexity: 2)}$
-4. **Direct Coding / Asset Generation Regex**:
-   - `create ppt|presentation` $\implies$ `ppt`
-   - `create pdf|document` $\implies$ `pdf`
-   - `write code to|debug this` $\implies$ `coding`
+#### Mathematical Formulation:
+$$\text{ComplexityScore} = 0.30D + 0.20S + 0.20R + 0.15C + 0.15U$$
+
+Where each factor is normalized to the $[0, 100]$ interval:
+1. **$D$ — Dependency Factor**:
+   Calculated from graph in-degrees and recursion depth:
+   $$\text{RawScore} = (\text{depCount} \times 30) + (\text{depth} \times 15)$$
+   Clamped to $[10, 100]$ (independent root tasks evaluate to $10$).
+2. **$S$ — Reasoning Steps Factor**:
+   Normalized using configurable thresholds:
+   - $1 \text{ step} \implies 20$
+   - $2 \text{ steps} \implies 35$
+   - $3 - 4 \text{ steps} \implies 55$
+   - $5 - 6 \text{ steps} \implies 75$
+   - $\ge 7 \text{ steps} \implies \min(100, 75 + (\text{stepCount} - 6) \times 5)$
+3. **$R$ — Retrieval Requirement Factor**:
+   - Live Search Tool Trigger $\implies 95$
+   - PDF Document RAG $\implies 90$
+   - Multi-source keyword match ($\ge 3$ terms: *research, market, stock, stats, global*) $\implies 85$
+   - Single keyword match $\implies 60$
+   - Internal knowledge base $\implies 15$
+4. **$C$ — Computational Difficulty Factor**:
+   - Complex full-stack code/architecture $\implies 95$
+   - Standard code engineering $\implies 80$
+   - Mathematical modeling/formulas ($\ge 3$ metrics: *calculate, growth rate, ratio, algorithm, simulation*) $\implies 85$
+   - Structured reasoning signals $\implies 65$
+   - Basic transformation $\implies 15$
+5. **$U$ — Uncertainty Factor**:
+   - Multi-hypothesis / strategic analysis queries (*recommend, evaluate strategy, forecast, options*) $\implies 75$
+   - Exploratory inquiry $\implies 55$
+   - Short underspecified prompt ($< 25$ chars) $\implies 70$
+   - Clearly specified task $\implies 20$
+
+#### Complexity Classification:
+- $0 \le \text{Score} < 40 \implies \mathbf{EASY}$
+- $40 \le \text{Score} < 70 \implies \mathbf{MEDIUM}$
+- $70 \le \text{Score} \le 100 \implies \mathbf{COMPLEX}$
 
 ---
 
-### 🧬 Algorithm 2: LLM-Guided Task Decomposition & Scientific Telemetry Scoring
-* **File:** `backend/services/agent/orchestration/taskAnalyzer.js`
-* **Goal:** Deconstruct complex tasks into atomic subtasks with dependency graphs and scientific telemetry scores.
+### 🧬 Algorithm 2: Recursive Task Decomposition with Stop Conditions
+* **File:** [`backend/services/agent/orchestration/taskDecomposer.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/orchestration/taskDecomposer.js)
+* **Goal:** Recursively break complex tasks into atomic child subtasks while strictly preventing infinite recursion and unnecessary overhead.
 
-#### Scientific Scoring Metrics ($1 - 10$ Scale):
-* **Complexity Score ($C_s$):** Computational and reasoning depth required.
-* **Decomposability Score ($D_s$):** Feasibility of breaking into independent sub-problems.
-* **Dependency Score ($Dep_s$):** Degree of sequential chaining vs parallel independence.
-* **Tool Requirement Score ($T_s$):** Necessity for live search, retrieval, or multimodal execution.
-* **Risk Score ($R_s$):** Probability of ambiguity or hallucination.
-
-#### Output Schema:
-```json
-{
-  "taskType": "research | analysis | coding | comparison | general",
-  "complexity": "low | medium | high",
-  "requiresMultipleAgents": true,
-  "executionStrategy": "parallel | sequential | hybrid",
-  "scores": {
-    "complexityScore": 8,
-    "decomposabilityScore": 9,
-    "dependencyScore": 4,
-    "toolRequirementScore": 9,
-    "riskScore": 3
-  },
-  "subtasks": [
-    {
-      "id": "subtask_search",
-      "name": "Market Search Agent",
-      "description": "Fetch real-time financial metrics for NVDA and AMD",
-      "agentType": "search",
-      "dependencies": []
-    },
-    {
-      "id": "subtask_comparison",
-      "name": "Comparison Agent",
-      "description": "Perform side-by-side valuation benchmarking",
-      "agentType": "comparison",
-      "dependencies": ["subtask_search"]
-    }
-  ]
-}
+#### Algorithmic Logic:
+```
+function recursivelyDecompose(tasks, tree, parentId, depth):
+  for each task in tasks:
+    1. Evaluate Complexity: (D, S, R, C, U) -> score & classification
+    2. Select Dynamic Agent: Cheapest capable agent
+    3. Add node to ExecutionTree
+    4. Check Stop Conditions:
+       - Stop if depth >= MAX_DECOMPOSITION_DEPTH (default 3)
+       - Stop if ComplexityScore < 70 (EASY or MEDIUM)
+       - Stop if task is already atomic/actionable (length < 40 chars and no conjunctions)
+       - Stop if decomposition cost exceeds expected benefit
+    5. If Stop Condition is FALSE:
+       - Generate 2-3 focused child subtasks via LLM / structured heuristics
+       - Mark parent node as "decomposed" (isLeaf = false)
+       - Recurse: recursivelyDecompose(children, tree, node.id, depth + 1)
 ```
 
 ---
 
-### 🕸️ Algorithm 3: Dynamic DAG Orchestration & Topological Batch Execution
-* **File:** `backend/services/agent/orchestration/orchestrator.js`
-* **Goal:** Execute subtasks respecting dependency constraints, running parallelizable subtasks concurrently, and passing accumulated context to downstream nodes.
+### 🎯 Algorithm 3: Cheapest Capable Dynamic Agent Selection
+* **File:** [`backend/services/agent/orchestration/dynamicAgentSelector.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/orchestration/dynamicAgentSelector.js)
+* **Goal:** Dynamically choose the lowest-cost model/agent capable of meeting task complexity and capability requirements.
 
-#### Algorithmic Formulation:
-Let $S = \{s_1, s_2, \dots, s_n\}$ be the set of subtasks. Each subtask $s_i$ has a set of dependencies $D_i \subseteq S$. Let $C$ be the set of completed subtask IDs, initially $C = \emptyset$.
+#### Selection Formula:
+$$\text{AgentScore} = w_{\text{cap}}\text{CapabilityMatch} + w_{\text{qual}}\text{Quality} + w_{\text{suit}}\text{Suitability} + w_{\text{tool}}\text{ToolCompatibility} - w_{\text{cost}}\text{CostPenalty}$$
 
-1. **Topological Batch Extraction**:
-   $$\text{Batch } B = \{ s_i \in S \setminus C \mid D_i \subseteq C \}$$
-2. **Cycle Prevention**:
-   $$\text{If } B = \emptyset \land S \setminus C \neq \emptyset \implies B = \{ \text{first}(S \setminus C) \}$$
-3. **Concurrent Execution**:
-   $$\text{Execute all } s \in B \text{ in parallel using } \texttt{Promise.allSettled()}$$
-4. **Context Accumulation**:
-   For each completed $s_k$, store its output in $\mathcal{M}[s_k]$.
-   When a dependent subtask $s_j$ runs ($D_j \cap C \neq \emptyset$), build contextual prompt:
-   $$\text{Context}(s_j) = \bigcup_{d \in D_j} \text{Output}(\mathcal{M}[d])$$
-5. **Update State**:
-   $$C \leftarrow C \cup \{ \text{id}(s) \mid s \in B \}$$
-   Repeat until $C = S$.
+*Default Weights:*
+$w_{\text{cap}} = 0.35, \quad w_{\text{qual}} = 0.25, \quad w_{\text{suit}} = 0.20, \quad w_{\text{tool}} = 0.10, \quad w_{\text{cost}} = 0.10$
 
----
-
-### 🛑 Algorithm 4: Distributed Real-Time Cancellation & Abort Lifecycle
-* **File:** `backend/services/agent/orchestration/cancellationManager.js`
-* **Goal:** Enable instant zero-leak termination of active agent pipelines upon user cancellation.
-
-#### Mechanism:
-1. **User Action**: User triggers `POST /api/agent/executions/:id/cancel`.
-2. **Dual-Layer Registration**:
-   - Stores `executionId` in local memory (`inMemoryCancelledTasks.add(executionId)`).
-   - Writes `cancellation:<executionId>` into Redis with 1-hour TTL.
-   - Publishes `workflow_cancelled` event over Redis Pub/Sub channel `execution_events:<executionId>`.
-3. **Execution Guarding**:
-   Before and after any async tool or LLM invocation, `assertNotCancelled(executionId)` is called:
-   $$\text{If } \text{isExecutionCancelled}(executionId) = \text{true} \implies \text{throw } \text{ResearchCancelledError}$$
-4. **Graceful Teardown**:
-   The error unwinds the call stack, releases Redis subscriptions, terminates the HTTP SSE stream, and saves a `cancelled` execution record to MongoDB.
+1. **Capability Match ($0 - 100$)**:
+   Direct agentType match $\implies 100$; Multiple capability intersections $\implies 90$; Single capability $\implies 70$; Incapable candidates ($< 50$) are rejected.
+2. **Suitability ($0 - 100$)**:
+   - For EASY tasks: Light tiers score $95$, Heavy tiers are penalized ($60$) to prevent overkill.
+   - For MEDIUM tasks: Balanced tiers score $95$, Light tiers score $85$.
+   - For COMPLEX tasks: Heavy tiers score $95$, Balanced tiers score $90$.
+3. **Tool Compatibility ($0 - 100$)**:
+   Evaluates support for required tools (`tavily_search`, `pdf_parser`, `monaco_artifact_generator`).
+4. **Cost Penalty ($0 - 100$)**:
+   Higher input/output pricing per 1M tokens incurs higher penalties.
+5. **Explainability**:
+   Returns `selectedAgent`, `agentScore`, human-readable `reason`, and list of `alternativesConsidered` with their scores.
 
 ---
 
-### 📚 Algorithm 5: PDF RAG Pipeline (Chunking, Vector Search, & Keyword Fallback)
-* **File:** `backend/services/agent/agents/pdfRag.agent.js`
-* **Goal:** Extract, vectorize, and retrieve semantic document context from user-uploaded PDFs.
+### 🌳 Algorithm 4: Hierarchical Execution Tree & Topological Dispatch
+* **Files:** [`executionTree.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/orchestration/executionTree.js), [`orchestrator.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/orchestration/orchestrator.js)
+* **Goal:** Model the full task hierarchy and execute only leaf nodes in parallel batches based on completed dependencies.
 
-#### Algorithmic Steps:
-1. **Text Extraction**: Uses `PDFParse` to extract raw string data from PDF binary buffer.
-2. **Recursive Character Text Splitting**:
-   - `chunkSize` = $1000$ characters.
-   - `chunkOverlap` = $200$ characters.
-   - Preserves semantic boundaries (`\n\n`, `\n`, ` `, `""`).
-3. **Dual-Mode Retrieval**:
-   - **Mode A (Vector DB)**: If Qdrant is connected, creates dynamic collection `pdf-<timestamp>`, embeds chunks, and runs $k$-nearest neighbor similarity search ($k=5$).
-   - **Mode B (In-Memory Fallback)**: If Qdrant is absent or fails, executes tokenized keyword scoring:
-     $$\text{Score}(doc, P) = \sum_{w \in P, |w| > 3} \mathbb{I}(w \in \text{lower}(doc))$$
-     Sorts chunks in descending order of score and takes top 5 chunks.
-4. **Context Injection & LLM Synthesis**: Injects retrieved context into prompt for LLM answer generation.
-5. **Garbage Collection**: Deletes temporary uploaded PDF file in `finally` block to prevent disk leakage.
+1. **Leaf Extraction**:
+   Only leaf nodes ($isLeaf = true$) represent executable tasks. Parent branch nodes represent decomposition containers.
+2. **Topological Batch Execution**:
+   - Extract ready batch $B = \{ \text{leaf} \mid \text{dependencies} \subseteq \text{CompletedSet} \}$.
+   - Execute batch concurrently using `Promise.allSettled()`.
+   - Update execution tree node statuses and metrics in real-time.
 
 ---
 
-### 🔎 Algorithm 6: Web Search Normalization, Deduplication, & Source Ranking
-* **File:** `backend/services/agent/utils/searchNormalizer.js`
-* **Goal:** Strip noisy HTML, deduplicate sources by URL, sanitize markdown, and format citations.
+### 🧠 Algorithm 5: Shared Incremental Working Memory
+* **File:** [`backend/services/agent/orchestration/sharedMemory.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/orchestration/sharedMemory.js)
+* **Goal:** Scoped context delivery preventing prompt explosion.
 
-#### Flow:
-1. **URL Domain Parsing**: Extracts human-readable publishers (e.g., `https://www.reuters.com/...` $\to$ `Reuters`).
-2. **URL Deduplication**: Uses `Set<URL>` to guarantee distinct sources.
-3. **HTML & Raw Dump Sanitization**:
-   - Replaces HTML tags: `/<[^>]*>/g` $\to$ `""`.
-   - Removes raw JSON query metadata: `/\{\s*"query"[\s\S]*\}/g` $\to$ `""`.
-   - Compresses multiple whitespaces to single space.
-4. **Snippet Truncation**: Enforces max length of 400 characters per snippet to prevent LLM context window overflow.
-5. **Dual Representation**:
-   - **Compact Context**: `[Source 1] Title (Publisher): Snippet` (fed into LLM).
-   - **Markdown References**: Formatted markdown citation list with backlinks.
+- Manages a versioned map of completed task outputs.
+- When an agent executes, `getDependencyContext(dependencies)` retrieves **only** direct prerequisite findings and newly generated facts.
+- Prevents duplicating the entire conversation history into every microservice LLM prompt.
 
 ---
 
-### 📊 Algorithm 7: Token Usage Normalization & Multi-Model Cost Calculation
-* **Files:** `usageTracker.js`, `pricing.js`
-* **Goal:** Normalize heterogeneous token metadata across providers (Groq, Google GenAI, OpenRouter, DeepSeek) and calculate accurate financial cost.
+### 🛡️ Algorithm 6: Measurable Multi-Domain Trust Evaluator
+* **File:** [`backend/services/agent/orchestration/trustEvaluator.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/orchestration/trustEvaluator.js)
+* **Goal:** Compute objective trustworthiness ($0 - 100$) from measurable evidence rather than model self-confidence.
 
-#### Provider Normalization Hierarchy:
-```
-1. response.usage_metadata (LangChain AIMessage standard)
-       ↓ (if null)
-2. response.response_metadata.tokenUsage (Groq / OpenRouter / Gemini)
-       ↓ (if null)
-3. response.additional_kwargs.usage (Direct API wrappers)
-```
+#### Domain Strategies:
+1. **Coding Domain**:
+   - Valid multi-file artifacts generated $\implies +35$
+   - Markdown code blocks present $\implies +25$
+   - Missing code structure penalty $\implies -25$
+   - Error trace detected $\implies -30$
+2. **Research / Web Domain**:
+   - Verified external search citations present $\implies +8$ per source (up to $+35$)
+   - Citation references present $\implies +25$
+   - Sufficient depth ($\ge 200$ chars) $\implies +20$
+   - Shallow content $\implies -15$
+3. **Analysis / Mathematical Domain**:
+   - Structured Markdown table present $\implies +30$
+   - Quantitative metrics ($15\%$, $\$5B$, growth numbers) $\implies +15$
+   - Thematic section structuring $\implies +10$
+4. **General Domain**:
+   - Non-empty length and clean execution $\implies +45$
+   - Refusal or rate-limit error $\implies -40$
 
-#### Cost Formula:
+#### Trust Classification:
+- $85 \le \text{TrustScore} \le 100 \implies \mathbf{HIGH}$
+- $60 \le \text{TrustScore} < 85 \implies \mathbf{MEDIUM}$
+- $0 \le \text{TrustScore} < 60 \implies \mathbf{LOW}$ (Triggers Escalation)
+
+---
+
+### ⚡ Algorithm 7: Targeted Single-Leaf Escalation Manager
+* **File:** [`backend/services/agent/orchestration/escalationManager.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/orchestration/escalationManager.js)
+* **Goal:** Automatically rectify low-trust outputs ($\text{TrustScore} < 60$) without re-executing the entire workflow.
+
+1. **Trigger**: Detected leaf node with $\text{TrustScore} < 60$.
+2. **Alternative Discovery**: Identifies next stronger capable agent in `AGENT_REGISTRY` (e.g. upgrades from light tier to heavy tier).
+3. **Refined Execution**: Reruns ONLY the affected leaf task with high-accuracy refinement prompt and updated model.
+4. **Trust Re-evaluation**: Recalculates trust score and updates shared memory.
+5. **Loop Protection**: Limits escalations to $\text{MAX\_TASK\_ESCALATIONS} = 2$.
+
+---
+
+### 💰 Algorithm 8: Fine-Grained Cost & Usage Telemetry Tracker
+* **File:** [`backend/services/agent/observability/costTracker.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/observability/costTracker.js)
+* **Goal:** Distinguish estimated vs actual costs across all tasks, recursion levels, and escalations.
+
 $$\text{Cost} = \left( \frac{\text{Input Tokens}}{1,000,000} \times P_{\text{input}} \right) + \left( \frac{\text{Output Tokens}}{1,000,000} \times P_{\text{output}} \right)$$
 
----
-
-### 📝 Algorithm 8: Map-Reduce Multi-Agent Synthesizer
-* **File:** `backend/services/agent/agents/synthesizer.agent.js`
-* **Goal:** Map individual subtask findings into structured domain summaries and reduce them into an executive research document.
-
-#### Output Structure Enforcement:
-1. **Executive Summary**: High-level verdict.
-2. **Comparison Matrix**: Clean Markdown tables with structured numbers.
-3. **Thematic Sections**: Categorized headings (`##`, `###`).
-4. **Actionable Takeaways**: Numbered strategic points.
-5. **Verified Sources & References**: Backlinked sources with publisher attribution.
-6. **Generated Assets Section**: Direct download links for generated PPT/PDF/Images.
+Aggregates workflow telemetry: `totalTasks`, `leafTasks`, `maxDepth`, `agentsUsed`, `escalations`, `totalTokens`, `estimatedCost`, `actualCost`, `totalDurationMs`, `averageTrust`.
 
 ---
 
-### 💻 Algorithm 9: Coding Intent Classification & Multi-File Generation
-* **File:** `backend/services/agent/agents/coding.agent.js`
-* **Goal:** Classify coding requests and generate full multi-file projects rendered in Monaco Editor.
+### 🛑 Algorithm 9: Distributed Real-Time Cancellation Lifecycle
+* **File:** [`backend/services/agent/orchestration/cancellationManager.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/orchestration/cancellationManager.js)
+* **Goal:** Zero-leak instant termination of active agent pipelines when the user clicks **[Stop]**.
 
-#### Intent Classification Schema:
-`CODE_GENERATION` | `CODE_REVIEW` | `CODE_EXPLANATION` | `DEBUGGING` | `OPTIMIZATION` | `CONVERSION` | `DOCUMENTATION`
-
-*For `CODE_GENERATION`:* Generates strict JSON:
-```json
-{
-  "files": [
-    { "name": "index.html", "content": "..." },
-    { "name": "style.css", "content": "..." },
-    { "name": "script.js", "content": "..." }
-  ]
-}
-```
+- Dual registration: in-memory set + Redis key `cancellation:<executionId>` with 1-hour TTL.
+- Publishes `workflow_cancelled` over Redis Pub/Sub channel `execution_events:<executionId>`.
+- Calls `assertNotCancelled(executionId)` before and after all async invocations, throwing `ResearchCancelledError` to unwind execution cleanly.
 
 ---
 
-### 📑 Algorithm 10: Dynamic Document (PDF & PPT) Generation
-* **Files:** `generatePdf.js`, `generatePpt.js`
-* **Goal:** Programmatically render structured PDF and 16:9 widescreen PowerPoint decks.
+### 📚 Algorithm 10: PDF RAG Pipeline
+* **File:** [`backend/services/agent/agents/pdfRag.agent.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/agents/pdfRag.agent.js)
+* **Goal:** Extract, vectorize, and retrieve semantic document context from user-uploaded PDFs.
 
-#### PDF Generation (`pdfkit`):
-- Dynamic stream piping into memory buffer.
-- Automatic page margins, header styling (`#1E3A8A`), bullet indentation, and footer watermarking.
-
-#### PowerPoint Deck Generation (`pptxgenjs`):
-- `LAYOUT_WIDE` ($16:9$ aspect ratio).
-- **Cover Slide**: Solid `#2563EB` background, centered typography.
-- **Content Slides**: Dynamic alternating zebra-striped rounded rectangles (`#F8FAFC` vs `#EFF6FF`), blue bullet indicators, and slide pagination (`X/N`).
-- **Closing Slide**: Dark `#0F172A` theme with thank-you card.
+- Uses `pdf-parse` for text extraction.
+- `RecursiveCharacterTextSplitter`: $1000$-char chunks with $200$-char overlap.
+- Vector search with Qdrant ($k=5$) or tokenized keyword-frequency fallback scoring.
 
 ---
 
-### 🔐 Algorithm 11: Dual-Session Authentication & Gateway Proxying
-* **Files:** `backend/gateway/index.js`, `backend/gateway/middleware/auth.middleware.js`
-* **Goal:** Cross-origin authentication resilient across `HttpOnly` cookies, `Authorization: Bearer <session>` headers, and custom `x-session-id` headers.
-
-#### Session Resolution Algorithm:
-```
-SessionID = req.cookies.session ?? req.headers["x-session-id"] ?? req.headers.authorization.slice(7)
-       ↓
-Fetch from Redis: GET session-${SessionID}
-       ↓
-If exists: req.user = JSON.parse(session) → Forward headers [x-user-id, x-user-email] to microservice
-If missing: Return HTTP 400 "session expired"
-```
+### 🔎 Algorithm 11: Web Search Normalization & Citation Ranking
+* **File:** [`backend/services/agent/utils/searchNormalizer.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/utils/searchNormalizer.js)
+* **Goal:** Sanitize HTML, deduplicate sources by URL, limit snippets to 400 characters, extract domain names, and format citations.
 
 ---
 
-### 📡 Algorithm 12: Real-Time SSE Telemetry & Pub/Sub Streaming
-* **File:** `backend/services/agent/controllers/agent.controller.js`
-* **Goal:** Stream live agent states, execution graphs, and metrics to the frontend with zero lag.
+### 📝 Algorithm 12: Executive Map-Reduce Multi-Agent Synthesizer
+* **File:** [`backend/services/agent/agents/synthesizer.agent.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/agents/synthesizer.agent.js)
+* **Goal:** Transform multi-agent subtask outputs into an executive report with structured Markdown comparison tables, thematic headings, strategic takeaways, and download links.
+
+---
+
+### 📑 Algorithm 13: Dynamic Presentation & Document Renderers
+* **Files:** [`generatePpt.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/utils/generatePpt.js), [`generatePdf.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/utils/generatePdf.js)
+* Programmatic generation of styled 16:9 widescreen PowerPoint decks (`pptxgenjs`) and styled PDF whitepapers (`pdfkit`).
+
+---
+
+### 🔐 Algorithm 14: Dual-Session Authentication & Gateway Forwarding
+* **Files:** [`backend/gateway/index.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/gateway/index.js), [`backend/gateway/middleware/auth.middleware.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/gateway/middleware/auth.middleware.js)
+* Validates session from `req.cookies.session`, `x-session-id`, or `Authorization: Bearer` against Redis, injecting authenticated `x-user-id` and `x-user-email` headers into microservices.
+
+---
+
+### 📡 Algorithm 15: Real-Time SSE Telemetry & Tree Streaming
+* **File:** [`backend/services/agent/controllers/agent.controller.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/controllers/agent.controller.js)
+* Streams live execution graph events (`tree_initialized`, `agent_started`, `agent_completed`, `node_escalation_started`, `workflow_completed`) directly to the client via Server-Sent Events.
 
 ---
 
@@ -297,12 +326,12 @@ If missing: Return HTTP 400 "session expired"
 ```javascript
 {
   executionId: { type: String, required: true, unique: true, index: true },
-  userId: { type: String, index: true },
+  userId: { type: String, required: true, index: true },
   conversationId: { type: String, index: true },
-  prompt: String,
-  taskType: String,
-  complexity: String,
-  executionStrategy: String,
+  prompt: { type: String, required: true },
+  taskType: { type: String, default: "general" },
+  complexity: { type: String, enum: ["low", "medium", "high", "EASY", "MEDIUM", "COMPLEX", "cancelled", "fallback"] },
+  executionStrategy: { type: String, default: "single" },
   scores: {
     complexityScore: Number,
     decomposabilityScore: Number,
@@ -311,11 +340,48 @@ If missing: Return HTTP 400 "session expired"
     riskScore: Number
   },
   selectedAgents: [String],
-  subtasks: [{ id: String, name: String, agentType: String, status: String, metrics: Object }],
-  agentExecutions: [{ agentId: String, model: String, inputTokens: Number, outputTokens: Number, durationMs: Number, estimatedCost: Number, status: String }],
+  subtasks: [
+    {
+      id: String,
+      name: String,
+      description: String,
+      agentType: String,
+      dependencies: [String],
+      complexityScore: Number,
+      classification: String,
+      selectedAgent: String,
+      model: String,
+      provider: String,
+      selectionReason: String,
+      trustScore: Number,
+      trustClassification: String,
+      escalated: Boolean,
+      status: String,
+      metrics: Object
+    }
+  ],
+  executionTree: Object, // Hierarchical tree with nested children
+  totalTasks: Number,
+  leafTasks: Number,
+  maxDepth: Number,
+  escalations: Number,
+  averageTrust: Number,
+  agentExecutions: [
+    {
+      agentId: String,
+      model: String,
+      provider: String,
+      inputTokens: Number,
+      outputTokens: Number,
+      durationMs: Number,
+      estimatedCost: Number,
+      status: String
+    }
+  ],
   totalTokens: Number,
   totalDurationMs: Number,
   estimatedCost: Number,
+  actualCost: Number,
   success: Boolean,
   finalAnswer: String
 }
@@ -330,9 +396,9 @@ If missing: Return HTTP 400 "session expired"
 | `POST` | `/api/auth/google` | Auth (`8001`) | Public | Verifies Firebase token, registers/logs in user, returns session |
 | `POST` | `/api/auth/logout` | Auth (`8001`) | Session | Destroys session from Redis and clears cookie |
 | `GET` | `/api/me` | Gateway (`8000`) | Session | Fetches current user profile and credit balance |
-| `POST` | `/api/agent/chat` | Agent (`8003`) | Session | Initiates adaptive multi-agent orchestration pipeline |
-| `GET` | `/api/agent/executions/:id` | Agent (`8003`) | Session | Fetches execution graph state and subtask statuses |
-| `GET` | `/api/agent/executions/:id/stream`| Agent (`8003`)| Session | SSE endpoint for live telemetry & execution progress |
+| `POST` | `/api/agent/chat` | Agent (`8003`) | Session | Initiates recursive adaptive multi-agent orchestration pipeline |
+| `GET` | `/api/agent/executions/:id` | Agent (`8003`) | Session | Fetches execution tree state and subtask statuses |
+| `GET` | `/api/agent/executions/:id/stream`| Agent (`8003`)| Session | SSE endpoint for live execution tree telemetry & progress |
 | `POST` | `/api/agent/executions/:id/cancel`| Agent (`8003`)| Session | Cancels active background research pipeline |
 | `GET` | `/api/agent/research/analytics` | Agent (`8003`) | Session | Returns scientific metrics across all strategies |
 | `GET` | `/api/agent/downloads/:filename`| Agent (`8003`) | Public | Downloads generated PDF/PPT/Image artifacts |

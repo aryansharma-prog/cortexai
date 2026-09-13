@@ -18,7 +18,8 @@ import {
   Info,
   Sliders,
   ChevronDown,
-  Wand2
+  Wand2,
+  Activity
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -35,9 +36,6 @@ import { addConversation, setConvTitle, setSelectedConversation } from "../redux
 import { updateConversation } from "../features/updateConversation";
 import sendMessage, { cancelExecutionRequest } from "../features/sendMessage";
 import MessageList from "./MessageList";
-import Nav from "./Nav";
-import TokenEfficiencyWidget from "./TokenEfficiencyWidget";
-import CortexContinuitySection from "./CortexContinuitySection";
 import TelemetryInspector from "./TelemetryInspector";
 
 export default function CommandCenter({ onViewInsights }) {
@@ -219,23 +217,25 @@ export default function CommandCenter({ onViewInsights }) {
   const hasMessages = messages && messages.length > 0;
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-[#faf8f5] text-slate-900 overflow-hidden h-screen">
-      {/* Top Nav Bar */}
-      <Nav
-        onToggleInspector={() => setIsInspectorOpen(!isInspectorOpen)}
-        isInspectorOpen={isInspectorOpen}
-        onExecute={() => {
-          if (prompt.trim()) handleRunTask();
-          else inputRef.current?.focus();
-        }}
-      />
+    <div className="flex-1 flex min-w-0 bg-[#faf8f5] text-slate-900 overflow-hidden h-screen relative">
+      {/* Floating Telemetry Toggle Trigger (As in Stitch) */}
+      <div className="fixed top-5 right-6 z-30">
+        <button
+          onClick={() => setIsInspectorOpen(!isInspectorOpen)}
+          title="Toggle Live Telemetry & Artifacts"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/95 hover:bg-orange-50/80 border border-stone-200/90 hover:border-orange-300 text-xs font-mono font-medium text-slate-700 hover:text-orange-600 transition-all shadow-[0_2px_10px_rgba(15,23,42,0.06)] hover:shadow-[0_2px_10px_rgba(249,115,22,0.18)] cursor-pointer backdrop-blur-md"
+        >
+          <Activity size={14} className="text-orange-600" />
+          <span>Live Telemetry</span>
+        </button>
+      </div>
 
       {/* Main Workspace Area (Chat Canvas + Inspector) */}
       <div className="flex-1 flex min-h-0 relative overflow-hidden">
         <div className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
           {!hasMessages ? (
-            /* Empty State: Command Center Dashboard */
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 sm:px-8 py-8 max-w-5xl mx-auto w-full flex flex-col items-center justify-center gap-6 radial-bg pb-32">
+            /* Clean Empty State */
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 sm:px-8 py-12 max-w-5xl mx-auto w-full flex flex-col items-center justify-center gap-6 radial-bg pb-36">
               {/* Hero Header */}
               <div className="text-center space-y-2 max-w-xl">
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 border border-orange-200 text-orange-600 text-[11px] font-mono font-semibold tracking-wider uppercase shadow-2xs">
@@ -246,12 +246,12 @@ export default function CommandCenter({ onViewInsights }) {
                   What do you want CortexAI to solve?
                 </h1>
                 <p className="text-xs sm:text-[13px] text-slate-500 leading-relaxed">
-                  Autonomous Multi-Model Routing: Claude 3.7 + DeepSeek V3 + Groq Llama with zero disruption and minimal token spend.
+                  Autonomous Multi-Model Routing across Claude 3.7, DeepSeek V3, and Groq Llama with minimal token spend.
                 </p>
               </div>
 
               {/* Sample Suggested Prompts */}
-              <div className="w-full max-w-3xl space-y-2">
+              <div className="w-full max-w-3xl space-y-2 pt-2">
                 <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 text-center font-medium">
                   Suggested Missions
                 </div>
@@ -266,14 +266,6 @@ export default function CommandCenter({ onViewInsights }) {
                     </button>
                   ))}
                 </div>
-              </div>
-
-              {/* Token Telemetry Widget */}
-              <TokenEfficiencyWidget onViewInsights={onViewInsights} />
-
-              {/* Continuity Section */}
-              <div className="w-full max-w-3xl">
-                <CortexContinuitySection />
               </div>
             </div>
           ) : (

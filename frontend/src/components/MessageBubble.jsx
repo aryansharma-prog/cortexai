@@ -142,18 +142,10 @@ export default function MessageBubble({
           <div className="w-6 h-6 rounded-md bg-orange-50 border border-orange-200 text-orange-600 flex items-center justify-center shadow-2xs">
             <Sparkles size={13} />
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-900 tracking-tight">
-              Cortex Consensus Cluster
-            </span>
-            <span className="px-1.5 py-0.2 rounded bg-orange-50 text-[10px] font-mono font-semibold text-orange-600 border border-orange-200">
-              Consensus 3/3
-            </span>
-          </div>
+          <span className="text-xs font-semibold text-slate-900 tracking-tight">
+            Cortex Consensus Cluster
+          </span>
         </div>
-        <span className="text-[11px] font-mono text-slate-400">
-          Autonomous Dynamic Multi-Model
-        </span>
       </div>
 
       {/* Main Glass Response Container */}

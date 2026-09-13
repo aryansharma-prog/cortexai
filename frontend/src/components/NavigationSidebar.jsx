@@ -7,12 +7,10 @@ import {
   Zap,
   User,
   Plus,
-  MessageSquare,
   PanelLeft,
   PanelRight,
   Menu,
   X,
-  ShieldCheck,
   Settings,
   BookOpen
 } from "lucide-react";
@@ -27,8 +25,6 @@ import {
   clearLiveExecution
 } from "../redux/messageSlice";
 import { getConversations } from "../features/getConversations";
-import logOut from "../features/logOut";
-import { setUserdata } from "../redux/userSlice";
 
 export default function NavigationSidebar({
   activeTab,
@@ -56,14 +52,6 @@ export default function NavigationSidebar({
     dispatch(setSelectedConversation(null));
     dispatch(setMessages([]));
     dispatch(setArtifacts([]));
-    dispatch(clearLiveExecution());
-    setActiveTab("command");
-    setMobileOpen(false);
-  };
-
-  const handleSelectConv = (conv) => {
-    if (selectedConversation?._id === conv?._id) return;
-    dispatch(setSelectedConversation(conv));
     dispatch(clearLiveExecution());
     setActiveTab("command");
     setMobileOpen(false);
@@ -164,16 +152,12 @@ export default function NavigationSidebar({
           <div className="flex items-center justify-between px-4 py-3.5 border-b border-stone-200/80">
             <div className="flex items-center gap-2.5">
               <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-orange-50 border border-orange-200 shadow-[0_2px_10px_rgba(249,115,22,0.18)]">
-                <Terminal size={16} className="text-orange-600" />
+                <Terminal size={16} className="text-orange-600 font-bold" />
               </div>
               <div className="flex flex-col">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-semibold text-slate-900 tracking-tight">CortexAI</span>
-                  <span className="px-1.5 py-0.2 rounded bg-orange-50 text-orange-600 border border-orange-200 text-[10px] font-mono font-medium">
-                    v2.4
-                  </span>
-                </div>
-                <span className="text-[10px] text-slate-400 font-mono">Autonomous Orchestrator</span>
+                <span className="text-base font-semibold text-slate-900 tracking-tight font-sans">
+                  CortexAI
+                </span>
               </div>
             </div>
 
@@ -237,34 +221,6 @@ export default function NavigationSidebar({
               );
             })}
           </nav>
-
-          {/* Recent Runs Sublist */}
-          {conversations && conversations.length > 0 && (
-            <div className="mt-4 px-3 border-t border-stone-200 pt-3">
-              <span className="text-[10px] font-mono uppercase text-slate-400 tracking-wider px-1">
-                Recent Threads
-              </span>
-              <div className="mt-1.5 space-y-0.5 max-h-36 overflow-y-auto custom-scrollbar">
-                {conversations.slice(0, 6).map((conv) => {
-                  const isSel = selectedConversation?._id === conv._id;
-                  return (
-                    <button
-                      key={conv._id}
-                      onClick={() => handleSelectConv(conv)}
-                      className={`w-full text-left px-2.5 py-1.5 rounded-md text-[11px] truncate flex items-center gap-2 transition-colors border-none cursor-pointer ${
-                        isSel
-                          ? "bg-orange-50 text-orange-700 font-semibold"
-                          : "text-slate-600 hover:text-slate-900 hover:bg-stone-50 bg-transparent"
-                      }`}
-                    >
-                      <MessageSquare size={12} className="shrink-0 opacity-70" />
-                      <span className="truncate">{conv.title || "Untitled Run"}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer Cluster: Online Status & Operator Profile */}

@@ -34,6 +34,8 @@ import { SharedMemory } from "./sharedMemory.js";
 import { evaluateTrust } from "./trustEvaluator.js";
 import { handleTaskEscalation } from "./escalationManager.js";
 import { CostTracker } from "../observability/costTracker.js";
+import { evaluateResponsePolicy } from "./responsePolicyEngine.js";
+import { validateAndRefineResponse } from "./responseValidator.js";
 
 /**
  * Publishes real-time execution event to Redis and updates active state.
@@ -469,7 +471,19 @@ export const runAdaptiveOrchestration = async (state) => {
     const sharedMemory = new SharedMemory(executionId);
     const costTracker = new CostTracker(executionId);
 
-    // 3. Build & Recursively Decompose Execution Tree
+    // 3. Evaluate Adaptive Response Policy
+    const responsePolicy = evaluateResponsePolicy({
+      prompt: state.prompt,
+      taskComplexity: complexity,
+      scores,
+      taskType,
+      taskAnalysis,
+      executionTree: null,
+      leafTaskCount: subtasks?.length || 1
+    });
+    costTracker.setResponsePolicy(responsePolicy);
+
+    // 4. Build & Recursively Decompose Execution Tree
     console.log(`[ORCHESTRATOR] Building hierarchical execution tree for query: "${state.prompt.slice(0, 80)}..."`);
     await recursivelyDecomposeTasks(subtasks, tree, "root", 1, {
       prompt: state.prompt,
@@ -481,18 +495,24 @@ export const runAdaptiveOrchestration = async (state) => {
     const leafNodes = tree.getLeafNodes();
     console.log(`[ORCHESTRATOR] Tree generated with ${tree.nodesMap.size - 1} total tasks, ${leafNodes.length} executable leaf nodes, max depth=${tree.getMaxDepth()}.`);
 
-    // Emit live execution tree initialization event
+    // Emit live execution tree initialization & response policy event
     await emitExecutionEvent(executionId, "tree_initialized", {
       executionId,
       taskType,
       complexity,
       executionStrategy,
       scores,
+      responsePolicy,
       executionTree: tree.toJSON(),
       totalTasks: tree.nodesMap.size - 1,
       leafTasks: leafNodes.length,
       maxDepth: tree.getMaxDepth(),
       workflowStatus: "running"
+    });
+
+    await emitExecutionEvent(executionId, "response_policy_evaluated", {
+      executionId,
+      responsePolicy
     });
 
     const executedAgentMetrics = [];
@@ -608,7 +628,7 @@ export const runAdaptiveOrchestration = async (state) => {
       agentId: "synthesizer",
       agentName: "Synthesis & Report Agent",
       status: "running",
-      activitySummary: "Synthesizing comprehensive executive report..."
+      activitySummary: `Synthesizing ${responsePolicy.depth} response...`
     });
 
     const allOutputs = sharedMemory.getAllOutputs();
@@ -622,6 +642,7 @@ export const runAdaptiveOrchestration = async (state) => {
       })),
       searchResults: accumulatedSearchResults,
       taskAnalysis,
+      responsePolicy,
       conversationId: state.conversationId,
       userId: state.userId,
       executionId
@@ -647,11 +668,38 @@ export const runAdaptiveOrchestration = async (state) => {
       metrics: synthesisResult.metrics
     });
 
+    // 7. Response Validation & Targeted Semantic Compression
+    await assertNotCancelled(executionId);
+    const validationResult = await validateAndRefineResponse({
+      rawResponse: synthesisResult.output,
+      responsePolicy,
+      prompt: state.prompt,
+      conversationId: state.conversationId,
+      userId: state.userId
+    });
+
+    const finalAnswer = validationResult.output;
+    responsePolicy.actualTokens = validationResult.finalTokens;
+    responsePolicy.compressionTriggered = validationResult.compressionTriggered;
+    responsePolicy.originalTokens = validationResult.originalTokens;
+    responsePolicy.finalTokens = validationResult.finalTokens;
+
+    if (validationResult.metrics) {
+      executedAgentMetrics.push({
+        agentId: "response_validator",
+        name: "Response Validator & Compression Agent",
+        subtaskId: "validation_stage",
+        status: "completed",
+        ...validationResult.metrics
+      });
+    }
+
     const totalDurationMs = Date.now() - startTime;
     const treeSummary = tree.getMetricsSummary();
     const metricsSummary = {
       ...aggregateWorkflowMetrics(executedAgentMetrics),
       ...treeSummary,
+      responsePolicy,
       totalDurationMs
     };
 
@@ -661,6 +709,7 @@ export const runAdaptiveOrchestration = async (state) => {
       complexity,
       executionStrategy,
       scores,
+      responsePolicy,
       selectedAgents,
       totalTasks: treeSummary.totalTasks,
       leafTasks: treeSummary.leafTasks,
@@ -692,6 +741,7 @@ export const runAdaptiveOrchestration = async (state) => {
       executionId,
       workflowStatus: "completed",
       metrics: metricsSummary,
+      responsePolicy,
       executionTree: workflowResponse.executionTree,
       totalDurationMs
     });
@@ -704,6 +754,7 @@ export const runAdaptiveOrchestration = async (state) => {
       prompt: state.prompt,
       taskType,
       complexity,
+      responsePolicy,
       executionStrategy,
       scores,
       selectedAgents,
@@ -720,7 +771,7 @@ export const runAdaptiveOrchestration = async (state) => {
       averageTrust: treeSummary.averageTrust,
       executionTree: workflowResponse.executionTree,
       success: true,
-      finalAnswer: synthesisResult.output
+      finalAnswer
     }).catch(err => console.error("[MongoDB Execution Save Error]", err));
 
     cleanupCancellation(executionId);
@@ -728,11 +779,12 @@ export const runAdaptiveOrchestration = async (state) => {
     return {
       ...state,
       executionId,
-      aiResponse: synthesisResult.output,
+      aiResponse: finalAnswer,
       images: allImages,
       artifacts: allArtifacts,
       searchResults: accumulatedSearchResults,
       taskAnalysis,
+      responsePolicy,
       workflow: workflowResponse,
       executionTree: workflowResponse.executionTree,
       metrics: metricsSummary

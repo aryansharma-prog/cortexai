@@ -37,6 +37,22 @@ const subtaskSchema = new mongoose.Schema({
   metrics: { type: mongoose.Schema.Types.Mixed, default: null }
 }, { _id: false });
 
+const responsePolicySchema = new mongoose.Schema({
+  depth: { type: String, enum: ["MINIMAL", "SHORT", "FOCUSED", "DETAILED"], default: "FOCUSED" },
+  mode: { type: String },
+  taskComplexity: { type: String },
+  taskType: { type: String },
+  targetTokens: { type: Number },
+  maxTokens: { type: Number },
+  actualTokens: { type: Number },
+  verbosity: { type: String },
+  compressionTriggered: { type: Boolean, default: false },
+  originalTokens: { type: Number },
+  finalTokens: { type: Number },
+  reason: { type: String },
+  userIntentOverride: { type: Boolean, default: false }
+}, { _id: false });
+
 const executionSchema = new mongoose.Schema({
   executionId: {
     type: String,
@@ -66,6 +82,7 @@ const executionSchema = new mongoose.Schema({
     enum: ["low", "medium", "high", "EASY", "MEDIUM", "COMPLEX", "cancelled", "fallback"],
     default: "low"
   },
+  responsePolicy: { type: responsePolicySchema, default: null },
   executionStrategy: {
     type: String,
     default: "single"

@@ -11,6 +11,14 @@ export class CostTracker {
   constructor(executionId = "default") {
     this.executionId = executionId;
     this.records = []; // array of task metrics
+    this.responsePolicy = null;
+  }
+
+  /**
+   * Sets response policy telemetry.
+   */
+  setResponsePolicy(policy = {}) {
+    this.responsePolicy = policy;
   }
 
   /**
@@ -97,7 +105,8 @@ export class CostTracker {
       totalDurationMs,
       totalDurationSec: Number((totalDurationMs / 1000).toFixed(2)),
       estimatedCost: hasCostData ? Number(totalCost.toFixed(6)) : null,
-      actualCost: hasCostData ? Number(totalCost.toFixed(6)) : null
+      actualCost: hasCostData ? Number(totalCost.toFixed(6)) : null,
+      responsePolicy: this.responsePolicy
     };
   }
 }

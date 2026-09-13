@@ -250,6 +250,7 @@ const TreeNodeItem = ({ node, isRoot = false }) => {
 
 export default function ExecutionTreeView({ executionTree = null, workflow = {} }) {
   const tree = executionTree || workflow?.executionTree;
+  const policy = workflow?.responsePolicy || workflow?.metrics?.responsePolicy || null;
 
   if (!tree) {
     return (
@@ -262,6 +263,38 @@ export default function ExecutionTreeView({ executionTree = null, workflow = {} 
 
   return (
     <div className="p-3">
+      {/* Response Policy Engine Bar */}
+      {policy && (
+        <div className="mb-3 px-3 py-2 rounded-lg bg-indigo-950/30 border border-indigo-500/20 text-xs flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center justify-center w-5 h-5 rounded bg-indigo-500/20 text-indigo-400 font-mono text-[10px] font-bold">
+              RP
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-slate-200 text-[11px]">Response Policy: {policy.depth}</span>
+                <span className="text-[10px] font-mono text-indigo-300 bg-indigo-500/15 px-1.5 py-0.2 rounded border border-indigo-500/20">
+                  Target: ~{policy.targetTokens}t {policy.actualTokens ? `(Actual: ${policy.actualTokens}t)` : ""}
+                </span>
+                {policy.compressionTriggered && (
+                  <span className="text-[9px] uppercase font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/30">
+                    Compressed
+                  </span>
+                )}
+              </div>
+              <div className="text-[10px] text-slate-400 mt-0.5">
+                {policy.reason || `Determined for ${policy.taskType || "task"} at ${policy.taskComplexity || "EASY"} complexity.`}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
+            <span>Sections: <strong className={policy.allowSections ? "text-emerald-400" : "text-slate-500"}>{policy.allowSections ? "YES" : "NO"}</strong></span>
+            <span>Tables: <strong className={policy.allowTables ? "text-emerald-400" : "text-slate-500"}>{policy.allowTables ? "YES" : "NO"}</strong></span>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-3 px-1 text-[11px] text-slate-400">
         <div className="flex items-center gap-1.5">
           <GitBranch size={13} className="text-indigo-400" />

@@ -106,6 +106,7 @@ export default function AgentActivityPanel({ workflow = {}, executionTree = null
   const strategy = workflow?.executionStrategy || "single";
   const complexity = workflow?.complexity || "low";
   const scores = workflow?.scores || {};
+  const responsePolicy = workflow?.responsePolicy || metrics?.responsePolicy || null;
   const currentTree = executionTree || workflow?.executionTree;
 
   const totalTasks = workflow?.totalTasks || metrics?.totalTasks || (subtasks.length > 0 ? subtasks.length : 1);
@@ -145,6 +146,21 @@ export default function AgentActivityPanel({ workflow = {}, executionTree = null
           }`}>
             {complexity} Complexity
           </span>
+
+          {/* Response Policy Badge */}
+          {responsePolicy && (
+            <span className={`px-2 py-0.5 rounded-full font-medium text-[10px] uppercase tracking-wider border ${
+              responsePolicy.depth === "MINIMAL"
+                ? "bg-teal-500/15 text-teal-300 border-teal-500/30"
+                : responsePolicy.depth === "SHORT"
+                ? "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                : responsePolicy.depth === "FOCUSED"
+                ? "bg-purple-500/15 text-purple-300 border-purple-500/30"
+                : "bg-amber-500/15 text-amber-300 border-amber-500/30"
+            }`}>
+              Policy: {responsePolicy.depth} (~{responsePolicy.targetTokens}t)
+            </span>
+          )}
         </div>
       </div>
 

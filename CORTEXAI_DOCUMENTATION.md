@@ -296,27 +296,60 @@ Aggregates workflow telemetry: `totalTasks`, `leafTasks`, `maxDepth`, `agentsUse
 
 ---
 
-### 📝 Algorithm 12: Executive Map-Reduce Multi-Agent Synthesizer
-* **File:** [`backend/services/agent/agents/synthesizer.agent.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/agents/synthesizer.agent.js)
-* **Goal:** Transform multi-agent subtask outputs into an executive report with structured Markdown comparison tables, thematic headings, strategic takeaways, and download links.
+### 🎯 Algorithm 12: Adaptive Response Policy Engine
+* **File:** [`backend/services/agent/orchestration/responsePolicyEngine.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/orchestration/responsePolicyEngine.js)
+* **Core Principle:** Strict architectural separation of **Task Complexity** (reasoning, tools, and agents required) from **Response Complexity** (depth, token budget, and structure the user needs).
+* **Minimum Sufficient Answer Principle:** Prefers the minimum information required to fully satisfy the user's inquiry over maximum model verbosity.
+
+$$\text{Response Policy} = f(\text{Task Complexity}, \text{User Intent Overrides}, \text{Task Nature}, \text{Subtask Dependency Structure})$$
+
+#### Depth Levels & Configuration Matrix
+| Policy Level | Target Tokens | Max Tokens | Verbosity | Sections Allowed | Tables Allowed | Strategic Takeaways | Examples Allowed | Use Cases |
+|---|---|---|---|---|---|---|---|---|
+| `MINIMAL` | $40$ | $100$ | `LOW` | ❌ No | ❌ No | ❌ No | ❌ No | Simple factual questions, math/calculations, direct lookups |
+| `SHORT` | $120$ | $250$ | `LOW` | ❌ No | ❌ No | ❌ No | ✅ Max 1 brief | Simple definitions, targeted code syntax fixes, concise summaries |
+| `FOCUSED` | $350$ | $750$ | `MEDIUM` | ✅ Yes | ✅ Yes | ❌ No | ✅ Yes | Direct comparisons, medium explanations, single-feature implementations |
+| `DETAILED` | $1200+$ | $3000$ | `HIGH` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | Comprehensive research, system designs, multi-market financial analyses |
+
+#### Intent Override Hierarchy
+$$\text{Explicit User Intent} \succ \text{Intrinsic Task Type} \succ \text{Task Complexity Default}$$
+- Triggers like *"briefly"*, *"in short"*, *"1 sentence"*, *"TL;DR"* immediately force `MINIMAL` or `SHORT` policy even for complex topics.
+- Triggers like *"explain in detail"*, *"deep dive"*, *"step by step"* force `DETAILED` policy even for simple topics.
 
 ---
 
-### 📑 Algorithm 13: Dynamic Presentation & Document Renderers
+### 🛡️ Algorithm 13: Non-Destructive Response Validator & Semantic Compression
+* **File:** [`backend/services/agent/orchestration/responseValidator.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/orchestration/responseValidator.js)
+* **Goal:** Verify synthesized responses against assigned token and structural constraints.
+* **Mechanism:**
+  1. Inspects synthesized output for token overshoot ($>1.25 \times \text{maxTokens}$) or forbidden report sections (`## Executive Summary`, `## Strategic Takeaways` in `MINIMAL`/`SHORT` mode).
+  2. If a violation is detected, triggers targeted semantic compression via LLM prompt.
+  3. **Zero Blind Truncation**: Never uses `.substring()`; preserves essential reasoning, code snippets, and citations while stripping fluff, repetitive conclusions, and unrequested background trivia.
+
+---
+
+### 📝 Algorithm 14: Executive Map-Reduce Multi-Agent Synthesizer
+* **File:** [`backend/services/agent/agents/synthesizer.agent.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/agents/synthesizer.agent.js)
+* **Goal:** Transform multi-agent subtask outputs into an executive response strictly tailored to the assigned `Response Policy`.
+* Dynamically constructs system prompt and instructions corresponding to `MINIMAL`, `SHORT`, `FOCUSED`, or `DETAILED` modes.
+
+---
+
+### 📑 Algorithm 15: Dynamic Presentation & Document Renderers
 * **Files:** [`generatePpt.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/utils/generatePpt.js), [`generatePdf.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/utils/generatePdf.js)
 * Programmatic generation of styled 16:9 widescreen PowerPoint decks (`pptxgenjs`) and styled PDF whitepapers (`pdfkit`).
 
 ---
 
-### 🔐 Algorithm 14: Dual-Session Authentication & Gateway Forwarding
+### 🔐 Algorithm 16: Dual-Session Authentication & Gateway Forwarding
 * **Files:** [`backend/gateway/index.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/gateway/index.js), [`backend/gateway/middleware/auth.middleware.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/gateway/middleware/auth.middleware.js)
 * Validates session from `req.cookies.session`, `x-session-id`, or `Authorization: Bearer` against Redis, injecting authenticated `x-user-id` and `x-user-email` headers into microservices.
 
 ---
 
-### 📡 Algorithm 15: Real-Time SSE Telemetry & Tree Streaming
+### 📡 Algorithm 17: Real-Time SSE Telemetry & Tree Streaming
 * **File:** [`backend/services/agent/controllers/agent.controller.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/controllers/agent.controller.js)
-* Streams live execution graph events (`tree_initialized`, `agent_started`, `agent_completed`, `node_escalation_started`, `workflow_completed`) directly to the client via Server-Sent Events.
+* Streams live execution graph events (`tree_initialized`, `response_policy_evaluated`, `agent_started`, `agent_completed`, `node_escalation_started`, `workflow_completed`) directly to the client via Server-Sent Events.
 
 ---
 

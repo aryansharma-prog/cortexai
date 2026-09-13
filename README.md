@@ -57,20 +57,27 @@ Whether analyzing complex corporate balance sheets, conducting deep multi-source
 * **Financial & Market Analysis Agent**: Deep analytical calculations, ratios, and valuation matrices (`groq` / `gpt-oss-120b`).
 * **Slide Deck & Presentation Agent**: Automated styled 16:9 PowerPoint generator (`pptxgenjs`).
 * **Document Generation Agent**: Automated styled PDF report generator (`pdfkit`).
-* **Executive Synthesizer**: Map-reduce consolidation into executive reports with comparison tables.
+* **Adaptive Synthesizer**: Response policy-driven synthesis engine tailored dynamically from direct 1-liners to comprehensive executive reports.
 
-### 4. 📊 Real-Time Execution Tree & Telemetry UI
-* **Hierarchical Execution Tree View**: Expandable/collapsible task tree showing parent-child links, complexity factors ($D, S, R, C, U$), model info, decision explainability, trust badges, and escalation chips.
+### 4. 🎯 Adaptive Response Policy Engine & Non-Destructive Compression
+* **Task Complexity $\neq$ Response Complexity**: Strict architectural separation ensuring simple queries (e.g., *"What is the capital of India?"*) receive direct 1-2 sentence answers without unwanted executive summaries or tables, while complex system designs receive deep multi-section reports.
+* **Minimum Sufficient Answer Principle**: Delivers only the necessary information to fully satisfy the user's inquiry.
+* **4-Tier Depth Levels**: `MINIMAL` ($40\text{t}$), `SHORT` ($120\text{t}$), `FOCUSED` ($350\text{t}$), and `DETAILED` ($1200+\text{t}$).
+* **Explicit User Intent Hierarchy**: Triggers like *"briefly"*, *"in short"*, *"1 line"* or *"in detail"* immediately override defaults.
+* **Non-Destructive Response Validator**: Performs targeted semantic compression when outputs exceed budget; never blindly truncates with `.substring()`.
+
+### 5. 📊 Real-Time Execution Tree & Telemetry UI
+* **Hierarchical Execution Tree View**: Expandable/collapsible task tree showing parent-child links, complexity factors ($D, S, R, C, U$), model info, decision explainability, trust badges, response policy status, and escalation chips.
 * **DAG Pipeline View**: Step-by-step parallel pipeline tracking (*Working*, *Waiting*, *Completed*, *Failed*, *Escalated*).
 * **Live Telemetry Tracker**: Real-time token usage, latency (ms), and actual/estimated cost estimations.
 * **Instant Cancellation**: Zero-leak background abort via Redis Pub/Sub and in-memory cancellation manager.
 
-### 5. 💻 Interactive Monaco Artifacts & Live Preview
+### 6. 💻 Interactive Monaco Artifacts & Live Preview
 * Embedded **Monaco Code Editor** with multi-file tabs (`index.html`, `style.css`, `script.js`, React, Python).
 * **Live Sandboxed Preview**: Zero-latency iframe rendering for live interactive prototypes.
 * 1-Click Code and full-response clipboard copying.
 
-### 6. 💳 Credits & Billing Management
+### 7. 💳 Credits & Billing Management
 * Integrated **Razorpay** checkout for starter and pro credit tier upgrades.
 * Real-time credit metering and usage tracking per agent execution.
 

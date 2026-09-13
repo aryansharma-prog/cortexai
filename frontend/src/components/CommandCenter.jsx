@@ -15,7 +15,10 @@ import {
   Sparkles,
   Layers,
   CheckCircle2,
-  Info
+  Info,
+  Sliders,
+  ChevronDown,
+  Wand2
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -35,14 +38,20 @@ import MessageList from "./MessageList";
 import Nav from "./Nav";
 import TokenEfficiencyWidget from "./TokenEfficiencyWidget";
 import CortexContinuitySection from "./CortexContinuitySection";
+import TelemetryInspector from "./TelemetryInspector";
 
 export default function CommandCenter({ onViewInsights }) {
   const [prompt, setPrompt] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [listening, setListening] = useState(false);
+  const [isInspectorOpen, setIsInspectorOpen] = useState(true);
+  const [selectedModelRoute, setSelectedModelRoute] = useState("Auto-Route (Best Speed & Cost)");
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
+
   const recognitionRef = useRef(null);
   const fileRef = useRef(null);
   const abortControllerRef = useRef(null);
+  const inputRef = useRef(null);
 
   const { selectedConversation } = useSelector((state) => state.conversation);
   const { messages, isLoading, isStopping, currentExecutionId } = useSelector(
@@ -108,7 +117,7 @@ export default function CommandCenter({ onViewInsights }) {
     dispatch(
       addMessage({
         role: "assistant",
-        content: "⏹️ **Task execution stopped by user.**\n\nTask state preserved in Shared Notebook."
+        content: "⏹️ **Task execution stopped by operator.**\n\nTask state preserved in Shared Memory."
       })
     );
   };
@@ -145,7 +154,7 @@ export default function CommandCenter({ onViewInsights }) {
       }
     }
 
-    if (conversation && conversation._id && conversation.title === "New Chat") {
+    if (conversation && conversation._id && (!conversation.title || conversation.title === "New Chat")) {
       const newTitle = userPrompt.slice(0, 40);
       updateConversation({ id: conversation._id, title: newTitle }).catch(console.error);
       dispatch(setConvTitle({ conversationId: conversation._id, title: newTitle }));
@@ -156,7 +165,7 @@ export default function CommandCenter({ onViewInsights }) {
     if (conversation?._id) {
       formData.append("conversationId", conversation._id);
     }
-    formData.append("agent", "auto"); // Autonomous routing
+    formData.append("agent", "auto");
     formData.append("executionId", executionId);
     if (fileToSend) {
       formData.append("file", fileToSend);
@@ -173,7 +182,7 @@ export default function CommandCenter({ onViewInsights }) {
       dispatch(
         addMessage({
           role: "assistant",
-          content: "⏹️ **Task execution stopped by user.**"
+          content: "⏹️ **Task execution stopped by operator.**"
         })
       );
     } else if (data?.answer) {
@@ -201,210 +210,130 @@ export default function CommandCenter({ onViewInsights }) {
   };
 
   const samplePrompts = [
+    "Design a distributed authentication and session invalidation architecture using JWT & Redis",
     "Compare Tesla and BYD market share, margins, and autonomous driving roadmap",
-    "Design a scalable distributed authentication architecture with JWT and Redis",
-    "Analyze Q3 tech earnings trends and generate an executive summary table",
+    "Build a high-performance streaming WebSocket gateway in Node.js & Go",
     "Explain Raft consensus algorithm step-by-step with state transitions"
   ];
 
   const hasMessages = messages && messages.length > 0;
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-[#090a0f] text-white overflow-hidden">
+    <div className="flex-1 flex flex-col min-w-0 bg-[#0a0d14] text-[#e1e2ec] overflow-hidden h-screen">
       {/* Top Nav Bar */}
-      <Nav />
+      <Nav
+        onToggleInspector={() => setIsInspectorOpen(!isInspectorOpen)}
+        isInspectorOpen={isInspectorOpen}
+        onExecute={() => {
+          if (prompt.trim()) handleRunTask();
+          else inputRef.current?.focus();
+        }}
+      />
 
-      {/* Main Container */}
-      {!hasMessages ? (
-        <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-8 max-w-4xl mx-auto w-full flex flex-col items-center justify-center gap-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {/* Hero Header */}
-          <div className="text-center space-y-2 max-w-xl">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[11px] font-mono tracking-wider uppercase">
-              <Terminal size={12} />
-              <span>CORTEX COMMAND CENTER</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-semibold text-slate-100 tracking-tight">
-              What do you want CortexAI to solve?
-            </h1>
-            <p className="text-xs sm:text-[13px] text-slate-400 leading-relaxed">
-              Provider-independent adaptive AI platform. Automatically routes across models with zero disruption and minimal token spend.
-            </p>
-          </div>
-
-          {/* Central Elegant Input Workspace */}
-          <div className="w-full max-w-2xl bg-[#0e1117] border border-white/[0.09] rounded-2xl p-4 sm:p-5 shadow-2xl space-y-3.5">
-            {selectedFile && (
-              <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-200">
-                <FileText size={14} className="text-blue-400" />
-                <span className="truncate max-w-[200px]">{selectedFile.name}</span>
-                <button
-                  onClick={() => {
-                    setSelectedFile(null);
-                    if (fileRef.current) fileRef.current.value = "";
-                  }}
-                  className="p-0.5 text-slate-400 hover:text-white border-none bg-transparent cursor-pointer"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            )}
-
-            <textarea
-              rows={3}
-              placeholder="Ask Cortex anything... (Task is dynamically analyzed, decomposed, and routed across models)"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              disabled={isLoading}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  if (prompt.trim() && !isLoading) {
-                    handleRunTask();
-                  }
-                }
-              }}
-              className="w-full bg-transparent outline-none resize-none text-[14.5px] text-slate-100 placeholder:text-slate-600 leading-relaxed [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            />
-
-            {/* Controls Bar */}
-            <div className="flex items-center justify-between pt-2 border-t border-white/[0.05]">
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="file"
-                  accept=".pdf,image/*"
-                  hidden
-                  ref={fileRef}
-                  onChange={(e) => {
-                    if (e.target.files?.[0]) setSelectedFile(e.target.files[0]);
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  className="p-2 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/[0.04] transition-colors border-none bg-transparent cursor-pointer"
-                  title="Attach PDF or Document"
-                >
-                  <Paperclip size={15} />
-                </button>
-                <button
-                  type="button"
-                  onClick={toggleMic}
-                  className={`p-2 rounded-lg transition-colors border-none cursor-pointer ${
-                    listening ? "bg-rose-500 text-white" : "text-slate-500 hover:text-slate-300 hover:bg-white/[0.04] bg-transparent"
-                  }`}
-                  title="Voice Input"
-                >
-                  {listening ? <Mic size={15} /> : <MicOff size={15} />}
-                </button>
+      {/* Main Workspace Area (Chat Canvas + Inspector) */}
+      <div className="flex-1 flex min-h-0 relative overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
+          {!hasMessages ? (
+            /* Empty State: Command Center Dashboard */
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 sm:px-8 py-8 max-w-4xl mx-auto w-full flex flex-col items-center justify-center gap-6 radial-bg pb-32">
+              {/* Hero Header */}
+              <div className="text-center space-y-2 max-w-xl">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#00d2ff]/10 border border-[#00d2ff]/30 text-[#00d2ff] text-[11px] font-mono tracking-wider uppercase">
+                  <Terminal size={12} />
+                  <span>CORTEX COMMAND CENTER</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-semibold text-[#e1e2ec] tracking-tight">
+                  What do you want CortexAI to solve?
+                </h1>
+                <p className="text-xs sm:text-[13px] text-[#859399] leading-relaxed">
+                  Autonomous Multi-Model Routing: Claude 3.7 + DeepSeek V3 + Groq Llama with zero disruption and minimal token spend.
+                </p>
               </div>
 
-              {isLoading ? (
-                <button
-                  onClick={handleStopExecution}
-                  disabled={isStopping}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-semibold cursor-pointer transition-all"
-                >
-                  {isStopping ? (
-                    <>
-                      <Loader2 size={13} className="animate-spin" />
-                      <span>Stopping...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Square size={12} className="fill-current" />
-                      <span>Stop</span>
-                    </>
-                  )}
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleRunTask()}
-                  disabled={!prompt.trim() && !selectedFile}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border-none cursor-pointer ${
-                    prompt.trim() || selectedFile
-                      ? "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/20"
-                      : "bg-white/[0.05] text-slate-500 cursor-not-allowed"
-                  }`}
-                >
-                  <span>Run with Cortex</span>
-                  <ArrowRight size={13} />
-                </button>
-              )}
+              {/* Sample Suggested Prompts */}
+              <div className="w-full max-w-2xl space-y-2">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-[#859399] text-center">
+                  Suggested Missions
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {samplePrompts.map((p, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleRunTask(p)}
+                      className="p-3 text-left rounded-xl border border-[#3c494e]/40 bg-[#191b23]/50 hover:bg-[#272a32]/80 hover:border-[#00d2ff]/40 text-xs text-[#e1e2ec]/90 transition-all cursor-pointer leading-snug shadow-sm group"
+                    >
+                      <span className="group-hover:text-[#00d2ff] transition-colors">{p}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Token Telemetry Widget */}
+              <TokenEfficiencyWidget onViewInsights={onViewInsights} />
+
+              {/* Continuity Section */}
+              <div className="w-full max-w-2xl">
+                <CortexContinuitySection />
+              </div>
             </div>
-          </div>
+          ) : (
+            /* Active Conversation Canvas */
+            <MessageList />
+          )}
 
-          {/* Lightweight Telemetry Row */}
-          <TokenEfficiencyWidget onViewInsights={onViewInsights} />
-
-          {/* Sample Prompts */}
-          <div className="w-full max-w-2xl space-y-2">
-            <div className="text-[11px] font-mono uppercase tracking-wider text-slate-500 text-center">
-              Suggested Tasks
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {samplePrompts.map((p, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleRunTask(p)}
-                  className="p-3 text-left rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1] text-xs text-slate-300 transition-all cursor-pointer leading-snug"
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Cortex Continuity Guarantee Section */}
-          <div className="w-full max-w-2xl">
-            <CortexContinuitySection />
-          </div>
-        </div>
-      ) : (
-        /* Active Conversation Flow */
-        <div className="flex-1 flex flex-col min-h-0">
-          <MessageList />
-
-          {/* Refined Bottom Input Bar */}
-          <div className="w-full px-3 sm:px-6 py-3 border-t border-white/[0.06] bg-[#090a0f]">
-            <div className="max-w-4xl mx-auto bg-[#0e1117] border border-white/[0.08] rounded-2xl p-3 flex flex-col gap-2 shadow-lg">
+          {/* ==================== BOTTOM FLOATING GLASS COMMAND DOCK ==================== */}
+          <div className="absolute bottom-4 left-4 right-4 sm:left-6 sm:right-6 max-w-4xl mx-auto z-20">
+            <div className="bg-[#10131a]/90 backdrop-blur-xl border border-[#3c494e]/60 rounded-xl p-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] space-y-2">
+              {/* Context Attachment Pills */}
               {selectedFile && (
-                <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-slate-200">
-                  <FileText size={13} className="text-blue-400" />
-                  <span className="truncate max-w-[200px]">{selectedFile.name}</span>
-                  <button
-                    onClick={() => {
-                      setSelectedFile(null);
-                      if (fileRef.current) fileRef.current.value = "";
-                    }}
-                    className="p-0.5 text-slate-400 hover:text-white border-none bg-transparent cursor-pointer"
-                  >
-                    <X size={12} />
-                  </button>
+                <div className="flex items-center gap-2 px-1">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#32353d] border border-[#3c494e]/60 text-[11px] font-mono text-[#e1e2ec]">
+                    <FileText size={13} className="text-[#00d2ff]" />
+                    <span className="truncate max-w-[200px]">{selectedFile.name}</span>
+                    <button
+                      onClick={() => {
+                        setSelectedFile(null);
+                        if (fileRef.current) fileRef.current.value = "";
+                      }}
+                      className="hover:text-[#ffb4ab] text-xs ml-1 border-none bg-transparent cursor-pointer text-[#859399]"
+                      title="Remove attachment"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <span className="text-[10px] text-[#859399] font-mono">File attached to context</span>
                 </div>
               )}
 
-              <textarea
-                rows={2}
-                placeholder={isLoading ? "Executing task across model pool..." : "Ask Cortex anything..."}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                disabled={isLoading}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    if (prompt.trim() && !isLoading) {
-                      handleRunTask();
-                    }
+              {/* Main Text Input Well */}
+              <div className="relative flex items-center">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder={
+                    isLoading
+                      ? "Executing task across model pool..."
+                      : "Instruct agent cluster or ask follow-up questions... (Type '/' for tools)"
                   }
-                }}
-                className="w-full bg-transparent outline-none resize-none text-[13.5px] text-slate-100 placeholder:text-slate-600 leading-relaxed [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              />
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  disabled={isLoading}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      if (prompt.trim() && !isLoading) {
+                        handleRunTask();
+                      }
+                    }
+                  }}
+                  className="w-full bg-[#0b0e15] text-[#e1e2ec] placeholder:text-[#859399] text-xs sm:text-[13px] rounded-lg pl-3 pr-24 py-2.5 border border-[#3c494e]/60 focus:outline-none focus:border-[#00d2ff] focus:ring-1 focus:ring-[#00d2ff] transition-all"
+                />
 
-              <div className="flex items-center justify-between pt-1 border-t border-white/[0.04]">
-                <div className="flex items-center gap-1">
+                {/* Embedded Quick Action Buttons */}
+                <div className="absolute right-2 flex items-center gap-1">
                   <input
                     type="file"
-                    accept=".pdf,image/*"
+                    accept=".pdf,image/*,.json,.txt,.py,.js"
                     hidden
                     ref={fileRef}
                     onChange={(e) => {
@@ -413,59 +342,132 @@ export default function CommandCenter({ onViewInsights }) {
                   />
                   <button
                     type="button"
-                    onClick={() => fileRef.current?.click()}
-                    className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/[0.04] transition-colors border-none bg-transparent cursor-pointer"
+                    onClick={toggleMic}
+                    className={`p-1.5 rounded-md transition-colors border-none cursor-pointer ${
+                      listening
+                        ? "bg-rose-500 text-white"
+                        : "text-[#859399] hover:text-[#00d2ff] bg-transparent"
+                    }`}
+                    title="Voice Input"
                   >
-                    <Paperclip size={14} />
+                    {listening ? <Mic size={15} /> : <MicOff size={15} />}
                   </button>
                   <button
                     type="button"
-                    onClick={toggleMic}
-                    className={`p-1.5 rounded-lg transition-colors border-none cursor-pointer ${
-                      listening ? "bg-rose-500 text-white" : "text-slate-500 hover:text-slate-300 hover:bg-white/[0.04] bg-transparent"
-                    }`}
+                    onClick={() => fileRef.current?.click()}
+                    className="p-1.5 rounded-md text-[#859399] hover:text-[#00d2ff] transition-colors border-none bg-transparent cursor-pointer"
+                    title="Attach File Context"
                   >
-                    {listening ? <Mic size={14} /> : <MicOff size={14} />}
+                    <Paperclip size={15} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Controls Toolbar */}
+              <div className="flex items-center justify-between pt-1 px-1">
+                <div className="flex items-center gap-2 relative">
+                  {/* Model Selector Dropdown */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowModelDropdown(!showModelDropdown)}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#1d1f27] hover:bg-[#272a32] border border-[#3c494e]/50 text-[11px] font-mono text-[#e1e2ec] transition-colors border-none cursor-pointer"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#00d2ff]" />
+                      <span className="truncate max-w-[170px] sm:max-w-[240px]">
+                        {selectedModelRoute}
+                      </span>
+                      <ChevronDown size={12} className="text-[#859399]" />
+                    </button>
+
+                    {showModelDropdown && (
+                      <div className="absolute bottom-full left-0 mb-1 w-64 bg-[#191b23] border border-[#3c494e]/60 rounded-lg shadow-2xl py-1 z-50 text-[11px] font-mono">
+                        {[
+                          "Auto-Route (Best Speed & Cost)",
+                          "Claude 3.7 Sonnet (Deep Reasoning)",
+                          "Groq Llama 3.3 70B (Ultra Low Latency)",
+                          "DeepSeek V3 (Code Synthesis)"
+                        ].map((m) => (
+                          <button
+                            key={m}
+                            onClick={() => {
+                              setSelectedModelRoute(m);
+                              setShowModelDropdown(false);
+                            }}
+                            className={`w-full text-left px-3 py-1.5 hover:bg-[#272a32] transition-colors border-none cursor-pointer ${
+                              selectedModelRoute === m ? "text-[#00d2ff] font-semibold" : "text-[#e1e2ec]"
+                            }`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Optimize Prompt Sparkle */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (prompt) {
+                        setPrompt(
+                          `Please provide a comprehensive, production-grade architectural analysis with step-by-step code and diagrams for: ${prompt}`
+                        );
+                      }
+                    }}
+                    className="hidden sm:flex items-center gap-1 px-2 py-1 rounded text-[11px] font-mono text-[#859399] hover:text-[#00d2ff] hover:bg-[#1d1f27] transition-colors border-none bg-transparent cursor-pointer"
+                    title="Enhance prompt for optimal agent routing"
+                  >
+                    <Wand2 size={12} className="text-[#00d2ff]" />
+                    <span>Optimize Prompt</span>
                   </button>
                 </div>
 
-                {isLoading ? (
-                  <button
-                    onClick={handleStopExecution}
-                    disabled={isStopping}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-semibold cursor-pointer transition-all"
-                  >
-                    {isStopping ? (
-                      <>
-                        <Loader2 size={12} className="animate-spin" />
-                        <span>Stopping...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Square size={11} className="fill-current" />
-                        <span>Stop</span>
-                      </>
-                    )}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleRunTask()}
-                    disabled={!prompt.trim() && !selectedFile}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all border-none cursor-pointer ${
-                      prompt.trim() || selectedFile
-                        ? "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/20"
-                        : "bg-white/[0.05] text-slate-500 cursor-not-allowed"
-                    }`}
-                  >
-                    <span>Run</span>
-                    <Send size={12} />
-                  </button>
-                )}
+                {/* Execute / Stop Button */}
+                <div className="flex items-center gap-2">
+                  {isLoading ? (
+                    <button
+                      onClick={handleStopExecution}
+                      disabled={isStopping}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-semibold cursor-pointer transition-all"
+                    >
+                      {isStopping ? (
+                        <>
+                          <Loader2 size={13} className="animate-spin" />
+                          <span>Stopping...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Square size={12} className="fill-current" />
+                          <span>Stop</span>
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleRunTask()}
+                      disabled={!prompt.trim() && !selectedFile}
+                      className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all border-none cursor-pointer ${
+                        prompt.trim() || selectedFile
+                          ? "bg-[#00d2ff] hover:brightness-110 text-[#003543] shadow-glow-cyan"
+                          : "bg-[#1d1f27] text-[#859399] cursor-not-allowed border border-[#3c494e]/30"
+                      }`}
+                    >
+                      <span>Execute Task</span>
+                      <span className="text-[11px] font-mono opacity-80">↵</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
-      )}
+
+        {/* Right Telemetry Inspector Panel (Collapsible) */}
+        {isInspectorOpen && (
+          <TelemetryInspector onClose={() => setIsInspectorOpen(false)} />
+        )}
+      </div>
     </div>
   );
 }

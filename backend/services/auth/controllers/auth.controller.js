@@ -2,7 +2,8 @@ import { getAuth } from "firebase-admin/auth";
 import { app } from "../config/firebase.js";
 import User from "../models/user.model.js";
 import redis from "../../../shared/redis/redis.js";
-import { encryptKey, maskKey } from "../utils/crypto.js";
+import { encryptKey, decryptKey, maskKey } from "../utils/crypto.js";
+import { validateProviderApiKey } from "../utils/providerValidator.js";
 import crypto from "crypto";
 
 const DEFAULT_SUPPORTED_PROVIDERS = [
@@ -12,6 +13,15 @@ const DEFAULT_SUPPORTED_PROVIDERS = [
     models: ["gemini-2.5-pro", "gemini-3.6-flash"],
     capabilities: ["Reasoning", "Vision", "Long Context"],
     latency: "Fast",
+    efficiency: "High",
+    supported: true
+  },
+  {
+    provider: "openai",
+    name: "OpenAI",
+    models: ["gpt-4o", "gpt-4o-mini"],
+    capabilities: ["Reasoning", "Coding", "Function Calling"],
+    latency: "Standard",
     efficiency: "High",
     supported: true
   },
@@ -39,15 +49,6 @@ const DEFAULT_SUPPORTED_PROVIDERS = [
     models: ["deepseek-r1", "deepseek-v3"],
     capabilities: ["Mathematical Reasoning", "Deep Coding"],
     latency: "Fast",
-    efficiency: "High",
-    supported: true
-  },
-  {
-    provider: "openai",
-    name: "OpenAI",
-    models: ["gpt-4o", "gpt-4o-mini"],
-    capabilities: ["Reasoning", "Coding", "Function Calling"],
-    latency: "Standard",
     efficiency: "High",
     supported: true
   },
@@ -175,7 +176,7 @@ export const logOut = async (req, res) => {
 
 /**
  * Get all available providers and user connection status (masked keys only)
- * GET /api/auth/providers
+ * GET /api/auth/providers OR GET /api/providers
  */
 export const getProviders = async (req, res) => {
   try {
@@ -190,6 +191,8 @@ export const getProviders = async (req, res) => {
         status: isConnected ? "connected" : "not_connected",
         keyMask: isConnected ? (userEntry.keyMask || "••••••••••••") : null,
         connectedAt: isConnected ? userEntry.connectedAt : null,
+        lastValidatedAt: isConnected ? userEntry.lastValidatedAt : null,
+        lastValidationStatus: isConnected ? (userEntry.lastValidationStatus || "valid") : null,
         isUserProvided: isConnected
       };
     });
@@ -210,12 +213,15 @@ export const getProviders = async (req, res) => {
 };
 
 /**
- * Connect a user API key securely with AES-256-GCM encryption
- * POST /api/auth/providers/connect
+ * Connect a user API key securely with validation and AES-256-GCM encryption
+ * POST /api/auth/providers/connect OR POST /api/auth/providers/:provider
  */
 export const connectProviderKey = async (req, res) => {
   try {
-    const { provider, apiKey } = req.body;
+    const providerParam = req.params?.provider;
+    const provider = (providerParam || req.body?.provider || "").toLowerCase();
+    const apiKey = req.body?.apiKey;
+
     if (!provider || !apiKey || typeof apiKey !== "string" || apiKey.trim().length < 8) {
       return res.status(400).json({ message: "A valid provider and API key are required." });
     }
@@ -225,22 +231,39 @@ export const connectProviderKey = async (req, res) => {
       return res.status(401).json({ message: "Unauthorized. Please log in first." });
     }
 
-    // Encrypt key with AES-256-GCM
-    const encryptedKey = encryptKey(apiKey.trim());
-    const keyMask = maskKey(apiKey.trim());
+    const trimmedKey = apiKey.trim();
+
+    // 1. Validate key against provider before storing
+    console.log(`[AUTH] Validating API key for provider="${provider}"...`);
+    const validationResult = await validateProviderApiKey(provider, trimmedKey);
+
+    if (!validationResult.valid) {
+      console.warn(`[AUTH] Rejected invalid API key for provider="${provider}": ${validationResult.message}`);
+      return res.status(400).json({
+        success: false,
+        message: validationResult.message || `Invalid API key for ${provider}. Please verify and retry.`
+      });
+    }
+
+    // 2. Encrypt key with AES-256-GCM
+    const encryptedKey = encryptKey(trimmedKey);
+    const keyMask = maskKey(trimmedKey);
 
     if (!user.connectedProviders) {
       user.connectedProviders = [];
     }
 
-    const existingIdx = user.connectedProviders.findIndex(p => p.provider === provider.toLowerCase());
+    const existingIdx = user.connectedProviders.findIndex(p => p.provider === provider);
+    const now = new Date();
     const entryData = {
-      provider: provider.toLowerCase(),
+      provider,
       status: "connected",
       keyMask,
       encryptedKey,
-      connectedAt: existingIdx >= 0 ? user.connectedProviders[existingIdx].connectedAt : new Date(),
-      updatedAt: new Date()
+      connectedAt: existingIdx >= 0 ? user.connectedProviders[existingIdx].connectedAt : now,
+      lastValidatedAt: now,
+      lastValidationStatus: "valid",
+      updatedAt: now
     };
 
     if (existingIdx >= 0) {
@@ -251,18 +274,72 @@ export const connectProviderKey = async (req, res) => {
 
     await user.save();
 
-    console.log(`[AUTH] Securely saved encrypted API key for provider="${provider}" userId="${user._id}"`);
+    console.log(`[AUTH] Securely saved AES-256-GCM encrypted API key for provider="${provider}" userId="${user._id}"`);
 
     return res.status(200).json({
       success: true,
-      provider: provider.toLowerCase(),
+      provider,
       status: "connected",
       keyMask,
-      message: `${provider} connected securely.`
+      lastValidatedAt: now,
+      latencyMs: validationResult.latencyMs,
+      message: `✓ ${provider.toUpperCase()} connected and validated successfully.`
     });
   } catch (error) {
     console.error("[Connect Provider Key Error]", error);
     return res.status(500).json({ message: `Failed to save provider key: ${error.message}` });
+  }
+};
+
+/**
+ * Validate an already stored encrypted provider key
+ * POST /api/auth/providers/:provider/validate
+ */
+export const validateStoredProviderKey = async (req, res) => {
+  try {
+    const provider = req.params?.provider?.toLowerCase();
+    if (!provider) {
+      return res.status(400).json({ message: "Provider parameter is required." });
+    }
+
+    const user = await resolveUser(req);
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const entry = user.connectedProviders?.find(p => p.provider === provider);
+    if (!entry || !entry.encryptedKey) {
+      return res.status(404).json({ message: `No credential stored for ${provider}.` });
+    }
+
+    // Decrypt key server-side only for validation
+    const decrypted = decryptKey(entry.encryptedKey);
+    if (!decrypted) {
+      return res.status(500).json({ message: "Failed to securely decrypt stored credential." });
+    }
+
+    const validationResult = await validateProviderApiKey(provider, decrypted);
+
+    // Update lastValidatedAt and status
+    entry.lastValidatedAt = new Date();
+    entry.lastValidationStatus = validationResult.valid ? "valid" : "invalid";
+    entry.status = validationResult.valid ? "connected" : "invalid";
+    await user.save();
+
+    return res.status(200).json({
+      success: validationResult.valid,
+      provider,
+      status: entry.status,
+      keyMask: entry.keyMask,
+      lastValidatedAt: entry.lastValidatedAt,
+      latencyMs: validationResult.latencyMs,
+      message: validationResult.valid
+        ? `✓ ${provider.toUpperCase()} key is active and healthy (${validationResult.latencyMs || 0}ms).`
+        : `⚠️ ${validationResult.message}`
+    });
+  } catch (error) {
+    console.error("[Validate Provider Error]", error);
+    return res.status(500).json({ message: "Failed to validate credential." });
   }
 };
 
@@ -309,7 +386,6 @@ export const completeOnboarding = async (req, res) => {
     user.hasCompletedOnboarding = true;
     await user.save();
 
-    // Update Redis session
     const sessionId = await redis.get(`user-session-${user._id}`);
     if (sessionId) {
       const sessionStr = await redis.get(`session-${sessionId}`);

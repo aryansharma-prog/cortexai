@@ -46,6 +46,9 @@ app.use("/api/agent/downloads", proxy(process.env.AGENT_SERVICE || "http://local
 }))
 
 app.use("/api/auth", proxy(process.env.AUTH_SERVICE || "http://localhost:8001"))
+app.use("/api/providers", protect, proxyWithHeader(process.env.AUTH_SERVICE || "http://localhost:8001", {
+  proxyReqPathResolver: (req) => `/providers${req.url}`
+}))
 app.use("/api/chat", protect, proxyWithHeader(process.env.CHAT_SERVICE || "http://localhost:8002"))
 app.use("/api/agent", protect, proxyWithHeader(process.env.AGENT_SERVICE || "http://localhost:8003"))
 app.use("/api/billing", protect, proxyWithHeader(process.env.BILLING_SERVICE || "http://localhost:8004"))

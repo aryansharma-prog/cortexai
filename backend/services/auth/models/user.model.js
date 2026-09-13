@@ -48,6 +48,14 @@ const userSchema=new mongoose.Schema({
             type: Date,
             default: Date.now
         },
+        lastValidatedAt: {
+            type: Date,
+            default: Date.now
+        },
+        lastValidationStatus: {
+            type: String,
+            default: "valid"
+        },
         updatedAt: {
             type: Date,
             default: Date.now

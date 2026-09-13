@@ -14,12 +14,15 @@ import {
   ChevronRight,
   Eye,
   EyeOff,
-  Trash2
+  Trash2,
+  RefreshCw,
+  Edit3
 } from "lucide-react";
 import {
   getProviders,
   connectProvider,
   disconnectProvider,
+  validateProvider,
   completeOnboarding
 } from "../features/providerApi";
 
@@ -27,9 +30,11 @@ export default function OnboardingModal({ open, onClose, onCompleted }) {
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeProviderInput, setActiveProviderInput] = useState(null);
+  const [activeManageProvider, setActiveManageProvider] = useState(null);
   const [inputKey, setInputKey] = useState("");
   const [showKeyText, setShowKeyText] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [validating, setValidating] = useState({});
   const [statusMessage, setStatusMessage] = useState(null);
 
   const fetchProviderData = async () => {
@@ -51,14 +56,41 @@ export default function OnboardingModal({ open, onClose, onCompleted }) {
     setStatusMessage(null);
     try {
       const res = await connectProvider(providerId, inputKey);
-      setStatusMessage({ type: "success", text: `${res.provider} connected securely.` });
+      setStatusMessage({
+        type: "success",
+        text: `✓ ${providerId.toUpperCase()} connected and validated successfully.`
+      });
       setInputKey("");
       setActiveProviderInput(null);
+      setActiveManageProvider(null);
       await fetchProviderData();
     } catch (err) {
-      setStatusMessage({ type: "error", text: err.message || "Failed to connect API key." });
+      setStatusMessage({
+        type: "error",
+        text: err.message || "Failed to validate and connect API key."
+      });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleValidate = async (providerId) => {
+    setValidating((prev) => ({ ...prev, [providerId]: true }));
+    setStatusMessage(null);
+    try {
+      const res = await validateProvider(providerId);
+      setStatusMessage({
+        type: res.success ? "success" : "error",
+        text: res.message || `${providerId} validated.`
+      });
+      await fetchProviderData();
+    } catch (err) {
+      setStatusMessage({
+        type: "error",
+        text: err.message || `Validation failed for ${providerId}.`
+      });
+    } finally {
+      setValidating((prev) => ({ ...prev, [providerId]: false }));
     }
   };
 
@@ -67,6 +99,7 @@ export default function OnboardingModal({ open, onClose, onCompleted }) {
     try {
       await disconnectProvider(providerId);
       setStatusMessage({ type: "info", text: `${providerId} disconnected.` });
+      setActiveManageProvider(null);
       await fetchProviderData();
     } catch (err) {
       setStatusMessage({ type: "error", text: "Failed to disconnect." });
@@ -81,7 +114,7 @@ export default function OnboardingModal({ open, onClose, onCompleted }) {
     if (onClose) onClose();
   };
 
-  const connectedCount = providers.filter(p => p.status === "connected").length;
+  const connectedCount = providers.filter((p) => p.status === "connected").length;
 
   if (!open) return null;
 
@@ -91,10 +124,10 @@ export default function OnboardingModal({ open, onClose, onCompleted }) {
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
-          animate={{ opacity: 0.75 }}
+          animate={{ opacity: 0.8 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-[#06070a] backdrop-blur-md"
+          className="fixed inset-0 bg-[#06070a]/90 backdrop-blur-md"
         />
 
         {/* Modal Window */}
@@ -103,20 +136,20 @@ export default function OnboardingModal({ open, onClose, onCompleted }) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.97, y: 12 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
-          className="relative w-full max-w-[660px] bg-[#0d1117] border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden flex flex-col z-10 max-h-[90vh]"
+          className="relative w-full max-w-[680px] bg-[#0d1117] border border-white/[0.09] rounded-2xl shadow-2xl overflow-hidden flex flex-col z-10 max-h-[90vh]"
         >
           {/* Header */}
           <div className="px-6 pt-6 pb-4 border-b border-white/[0.06] flex items-start justify-between gap-4">
             <div>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[11px] font-mono mb-2">
                 <Sparkles size={11} />
-                <span>BYOK Architecture</span>
+                <span>BYOK Secure Credential Onboarding</span>
               </div>
               <h2 className="text-xl font-semibold text-slate-100 tracking-tight">
                 Connect Your AI Models
               </h2>
               <p className="text-xs sm:text-[13px] text-slate-400 mt-1 leading-relaxed">
-                Bring your own AI access. CortexAI intelligently routes your tasks across the models you connect.
+                Connect your own AI providers to power CortexAI. Your credentials are securely encrypted and remain under your control.
               </p>
             </div>
             <button
@@ -166,6 +199,8 @@ export default function OnboardingModal({ open, onClose, onCompleted }) {
               providers.map((p) => {
                 const isConnected = p.status === "connected";
                 const isEditing = activeProviderInput === p.provider;
+                const isManaging = activeManageProvider === p.provider;
+                const isValidating = validating[p.provider];
 
                 return (
                   <div
@@ -176,7 +211,9 @@ export default function OnboardingModal({ open, onClose, onCompleted }) {
                       <div className="flex items-center gap-3">
                         <div
                           className={`w-2 h-2 rounded-full shrink-0 ${
-                            isConnected ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" : "bg-slate-600"
+                            isConnected
+                              ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]"
+                              : "bg-slate-600"
                           }`}
                         />
                         <div>
@@ -197,22 +234,24 @@ export default function OnboardingModal({ open, onClose, onCompleted }) {
                       <div className="flex items-center gap-2">
                         {isConnected ? (
                           <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-mono text-slate-400 bg-black/40 px-2 py-1 rounded border border-white/[0.06]">
+                            <span className="text-[11px] font-mono text-slate-300 bg-black/40 px-2 py-1 rounded border border-white/[0.06]">
                               {p.keyMask || "••••••••••••"}
                             </span>
                             <button
-                              onClick={() => handleDisconnect(p.provider)}
-                              disabled={saving}
-                              className="px-2.5 py-1 text-[11px] font-medium text-slate-400 hover:text-rose-400 bg-transparent hover:bg-rose-500/10 rounded-lg border border-transparent hover:border-rose-500/20 transition-all cursor-pointer"
-                              title="Disconnect Provider"
+                              onClick={() => {
+                                setActiveManageProvider(isManaging ? null : p.provider);
+                                setActiveProviderInput(null);
+                              }}
+                              className="px-2.5 py-1 text-xs font-medium text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] rounded-lg border border-white/[0.08] transition-all cursor-pointer"
                             >
-                              <Trash2 size={12} />
+                              {isManaging ? "Close" : "Manage"}
                             </button>
                           </div>
                         ) : (
                           <button
                             onClick={() => {
                               setActiveProviderInput(isEditing ? null : p.provider);
+                              setActiveManageProvider(null);
                               setInputKey("");
                             }}
                             className="px-3 py-1.5 text-xs font-medium text-blue-400 hover:text-white bg-blue-500/10 hover:bg-blue-600 rounded-lg border border-blue-500/25 transition-all cursor-pointer"
@@ -223,7 +262,57 @@ export default function OnboardingModal({ open, onClose, onCompleted }) {
                       </div>
                     </div>
 
-                    {/* Inline Key Input Form */}
+                    {/* Manage Sub-Menu for Connected Providers */}
+                    {isManaging && isConnected && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="pt-2.5 border-t border-white/[0.05] flex items-center justify-between flex-wrap gap-2 text-xs"
+                      >
+                        <div className="text-[11px] text-slate-400 flex items-center gap-2">
+                          <CheckCircle2 size={12} className="text-emerald-400" />
+                          <span>Status: Connected & AES-256-GCM Encrypted</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleValidate(p.provider)}
+                            disabled={isValidating}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.08] transition-all cursor-pointer"
+                          >
+                            <RefreshCw
+                              size={11}
+                              className={isValidating ? "animate-spin text-blue-400" : "text-blue-400"}
+                            />
+                            <span>{isValidating ? "Testing..." : "Validate"}</span>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setActiveProviderInput(p.provider);
+                              setActiveManageProvider(null);
+                              setInputKey("");
+                            }}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.08] transition-all cursor-pointer"
+                          >
+                            <Edit3 size={11} className="text-amber-400" />
+                            <span>Replace Key</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleDisconnect(p.provider)}
+                            disabled={saving}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-rose-200 border border-rose-500/20 transition-all cursor-pointer"
+                          >
+                            <Trash2 size={11} />
+                            <span>Disconnect</span>
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {/* Inline Key Input Form (Connect or Replace) */}
                     {isEditing && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
@@ -232,7 +321,7 @@ export default function OnboardingModal({ open, onClose, onCompleted }) {
                         className="pt-2 border-t border-white/[0.05] flex flex-col gap-2"
                       >
                         <div className="text-[11px] text-slate-400">
-                          Enter your {p.name} API Key:
+                          Enter your {p.name} API Key (will be validated live and encrypted):
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="relative flex-1">
@@ -263,7 +352,7 @@ export default function OnboardingModal({ open, onClose, onCompleted }) {
                             {saving ? (
                               <>
                                 <Loader2 size={12} className="animate-spin" />
-                                <span>Saving...</span>
+                                <span>Validating & Saving...</span>
                               </>
                             ) : (
                               <span>Save & Connect</span>

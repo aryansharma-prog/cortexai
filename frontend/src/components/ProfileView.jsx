@@ -207,9 +207,17 @@ export default function ProfileView() {
                     />
                     <span className="text-slate-200 font-medium">{p.name || p.provider}</span>
                   </div>
-                  <span className="text-[10.5px] font-mono text-slate-400">
-                    {isConn ? p.keyMask || "● Connected" : "System Fallback"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10.5px] font-mono text-slate-400">
+                      {isConn ? p.keyMask || "● Connected" : "○ Not Connected"}
+                    </span>
+                    <button
+                      onClick={() => setShowConnectModal(true)}
+                      className="px-2 py-0.5 text-[10.5px] font-medium text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] rounded border border-white/[0.06] transition-colors cursor-pointer"
+                    >
+                      {isConn ? "Manage" : "Connect"}
+                    </button>
+                  </div>
                 </div>
               );
             })}

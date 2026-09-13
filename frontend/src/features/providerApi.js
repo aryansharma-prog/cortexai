@@ -44,6 +44,19 @@ export async function disconnectProvider(provider) {
 }
 
 /**
+ * Validate an already connected provider key
+ */
+export async function validateProvider(provider) {
+  try {
+    const { data } = await api.post(`/api/auth/providers/${provider}/validate`);
+    return data;
+  } catch (error) {
+    console.error('[validateProvider Error]', error?.response?.data || error?.message);
+    throw error?.response?.data || { message: error.message || 'Validation failed' };
+  }
+}
+
+/**
  * Mark onboarding workflow completed
  */
 export async function completeOnboarding() {

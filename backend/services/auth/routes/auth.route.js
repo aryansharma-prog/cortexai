@@ -6,6 +6,7 @@ import {
   updateUserPayment,
   getProviders,
   connectProviderKey,
+  validateStoredProviderKey,
   disconnectProviderKey,
   completeOnboarding,
   getUserProfile
@@ -25,6 +26,8 @@ router.post("/deduct-credits", deductCredits);
 // BYOK Model Provider Key Management (AES-256-GCM Encrypted)
 router.get("/providers", getProviders);
 router.post("/providers/connect", connectProviderKey);
+router.post("/providers/:provider", connectProviderKey);
+router.post("/providers/:provider/validate", validateStoredProviderKey);
 router.delete("/providers/:provider", disconnectProviderKey);
 
 // Onboarding Status

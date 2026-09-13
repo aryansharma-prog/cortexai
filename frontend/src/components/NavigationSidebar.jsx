@@ -168,17 +168,12 @@ export default function NavigationSidebar({
         }`}
       >
         <div>
-          {/* Header Logo & Identity */}
+          {/* Header Logo & Identity - Pure Text CortexAI */}
           <div className="flex items-center justify-between px-4 py-3.5 border-b border-stone-200/80">
-            <div className="flex items-center gap-2.5">
-              <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-orange-50 border border-orange-200 shadow-[0_2px_10px_rgba(249,115,22,0.18)]">
-                <Terminal size={16} className="text-orange-600 font-bold" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-base font-semibold text-slate-900 tracking-tight font-sans">
-                  CortexAI
-                </span>
-              </div>
+            <div className="flex items-center">
+              <span className="text-lg font-semibold text-slate-900 tracking-tight font-sans">
+                CortexAI
+              </span>
             </div>
 
             <button
@@ -220,63 +215,71 @@ export default function NavigationSidebar({
                   }`}
                 >
                   <Icon
-                    size={15}
-                    className={isActive ? "text-orange-600" : "text-slate-400"}
+                    size={16}
+                    className={
+                      isActive
+                        ? "text-orange-600"
+                        : "text-slate-400 group-hover:text-orange-600 transition-colors"
+                    }
                   />
-                  <span>{item.label}</span>
-                  {isActive && (
-                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-600 shadow-[0_0_8px_rgba(234,88,12,0.7)]" />
-                  )}
-                  {item.badge && !isActive && (
+                  <span className="font-medium">{item.label}</span>
+                  {item.badge && (
                     <span className="ml-auto text-[10px] text-orange-600 font-semibold font-mono bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200/60">
                       {item.badge}
                     </span>
                   )}
-                  {item.count && !isActive && (
-                    <span className="ml-auto text-[10px] text-slate-600 font-mono bg-stone-100 px-1.5 py-0.5 rounded border border-stone-200 font-medium">
+                  {item.count !== undefined && !item.badge && (
+                    <span className="ml-auto text-[10px] text-slate-500 font-mono bg-stone-100 px-1.5 py-0.5 rounded border border-stone-200 font-medium">
                       {item.count}
                     </span>
+                  )}
+                  {isActive && !item.badge && !item.count && (
+                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-600 shadow-[0_0_8px_rgba(234,88,12,0.7)]" />
                   )}
                 </button>
               );
             })}
           </nav>
 
-          {/* Chat History / Recent Conversations */}
-          <div className="mt-4 px-2.5 border-t border-stone-200/80 pt-3">
-            <div className="flex items-center justify-between px-1 mb-1.5">
-              <span className="text-[10px] font-mono uppercase text-slate-400 font-semibold tracking-wider">
-                Chat History
-              </span>
-              <span className="text-[10px] font-mono text-orange-600 bg-orange-50 px-1.5 py-0.2 rounded border border-orange-200/50 font-semibold">
-                {conversations?.length || 0}
-              </span>
+          {/* Chat History Section */}
+          <div className="mt-4 px-3">
+            <div className="flex items-center justify-between text-[11px] font-mono font-medium text-slate-500 uppercase tracking-wider px-1 pb-1.5">
+              <span>Chat History</span>
+              <span className="text-[10px] text-slate-400 font-mono">{conversations?.length || 0}</span>
             </div>
-            <div className="space-y-0.5 max-h-[calc(100vh-420px)] overflow-y-auto custom-scrollbar pr-0.5">
-              {conversations && conversations.length > 0 ? (
-                conversations.map((conv) => {
-                  const isSel = selectedConversation?._id === conv._id && activeTab === "command";
+
+            <div className="space-y-0.5 overflow-y-auto max-h-[calc(100vh-380px)] custom-scrollbar pr-0.5">
+              {loadingConvs ? (
+                <div className="py-4 text-center text-xs text-slate-400">Loading chats...</div>
+              ) : conversations && conversations.length > 0 ? (
+                conversations.map((c) => {
+                  const isSelected = selectedConversation?._id === c._id && activeTab === "command";
                   return (
                     <button
-                      key={conv._id}
-                      onClick={() => handleSelectConv(conv)}
-                      className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs truncate flex items-center gap-2 transition-all border-none cursor-pointer ${
-                        isSel
-                          ? "bg-orange-50 text-orange-700 font-semibold border-l-2 border-orange-600 shadow-2xs"
+                      key={c._id}
+                      onClick={() => handleSelectConv(c)}
+                      className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-mono text-left transition-all border-none cursor-pointer group ${
+                        isSelected
+                          ? "bg-orange-50 text-orange-700 font-semibold border border-orange-200/80 shadow-2xs"
                           : "text-slate-600 hover:text-slate-900 hover:bg-stone-50 bg-transparent"
                       }`}
-                      title={conv.title || "Untitled Conversation"}
                     >
                       <MessageSquare
                         size={13}
-                        className={isSel ? "text-orange-600 shrink-0" : "text-slate-400 shrink-0"}
+                        className={
+                          isSelected
+                            ? "text-orange-600 shrink-0"
+                            : "text-slate-400 group-hover:text-orange-600 shrink-0 transition-colors"
+                        }
                       />
-                      <span className="truncate">{conv.title || "Untitled Conversation"}</span>
+                      <span className="truncate flex-1">
+                        {c.title || "Untitled Task"}
+                      </span>
                     </button>
                   );
                 })
               ) : (
-                <div className="text-[11px] text-slate-400 font-mono px-2 py-2 italic text-center">
+                <div className="py-3 text-center text-[11px] text-slate-400 font-mono">
                   No previous chats
                 </div>
               )}
@@ -284,19 +287,8 @@ export default function NavigationSidebar({
           </div>
         </div>
 
-        {/* Footer Cluster: Online Status & Operator Profile */}
+        {/* Footer Cluster: Operator Profile */}
         <div className="p-3 border-t border-stone-200 space-y-2 bg-stone-50/50">
-          {/* Status Online Pill */}
-          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white border border-stone-200 shadow-2xs">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
-              </span>
-              <span className="text-[11px] font-mono text-slate-700">System Online</span>
-            </div>
-            <span className="text-[10px] font-mono font-semibold text-orange-600">99.98%</span>
-          </div>
-
           {/* User Operator Profile */}
           <div
             onClick={() => setActiveTab("profile")}
@@ -307,10 +299,9 @@ export default function NavigationSidebar({
                 {(userData?.name || "AV").slice(0, 2).toUpperCase()}
               </div>
               <div className="flex flex-col">
-                <span className="text-xs font-semibold text-slate-900 truncate max-w-[110px]">
+                <span className="text-xs font-semibold text-slate-900 truncate max-w-[130px]">
                   {userData?.name || "Alex V."}
                 </span>
-                <span className="text-[10px] text-slate-500 font-mono">Principal Arch</span>
               </div>
             </div>
             <Settings size={14} className="text-slate-400 hover:text-orange-600 transition-colors" />

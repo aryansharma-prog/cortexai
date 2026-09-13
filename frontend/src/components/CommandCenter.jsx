@@ -345,7 +345,7 @@ export default function CommandCenter({ onViewInsights }) {
                   placeholder={
                     isLoading
                       ? "Executing task across model pool..."
-                      : "Instruct agent cluster or ask follow-up questions... (Type '/' for tools)"
+                      : "How can I help you today ?"
                   }
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}

@@ -135,11 +135,8 @@ function Home() {
           <div className="w-full max-w-[400px] bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 flex flex-col gap-6 shadow-2xl">
             {/* Header */}
             <div className="flex flex-col gap-2 text-center">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-orange-600 to-amber-500 flex items-center justify-center text-white font-bold text-sm mx-auto shadow-lg shadow-orange-500/30">
-                C
-              </div>
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight mt-1">
-                CortexAI Infrastructure
+              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+                CortexAI
               </h2>
               <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
                 Provider-independent adaptive AI platform. Autonomous routing across models with zero disruption and minimal token spend.

@@ -26,6 +26,7 @@ import {
   clearLiveExecution
 } from "../redux/messageSlice";
 import { getConversations } from "../features/getConversations";
+import getMessages from "../features/getMessages";
 
 export default function NavigationSidebar({
   activeTab,
@@ -56,6 +57,24 @@ export default function NavigationSidebar({
     dispatch(clearLiveExecution());
     setActiveTab("command");
     setMobileOpen(false);
+  };
+
+  const handleSelectConv = async (conv) => {
+    if (!conv) return;
+    dispatch(setSelectedConversation(conv));
+    dispatch(clearLiveExecution());
+    setActiveTab("command");
+    setMobileOpen(false);
+    try {
+      const data = await getMessages(conv._id);
+      dispatch(setMessages(data || []));
+      const latestArtifactMessage = [...(data || [])]
+        .reverse()
+        .find((msg) => msg.artifacts && msg.artifacts.length > 0);
+      dispatch(setArtifacts(latestArtifactMessage?.artifacts || []));
+    } catch (err) {
+      console.error("[handleSelectConv Error]", err);
+    }
   };
 
   const navItems = [

@@ -18,10 +18,10 @@ function MessageList() {
   }, [messages?.length, isLoading]);
 
   return (
-    <div className="flex-1 overflow-y-auto custom-scrollbar px-3 sm:px-6 py-4 sm:py-6 space-y-4 radial-bg pb-36">
-      <div className="space-y-4">
+    <div className="flex-1 overflow-y-auto custom-scrollbar px-3 sm:px-6 py-4 sm:py-6 radial-bg pb-44">
+      <div className="max-w-5xl mx-auto w-full space-y-4">
         {messages?.map((msg, i) => (
-          <div key={msg._id || msg.id || i}>
+          <div key={msg._id || msg.id || i} className="w-full">
             <MessageBubble
               role={msg?.role}
               content={msg?.content}

@@ -44,13 +44,16 @@ export const updateConversation=async (req,res) => {
 
 export const saveMessage=async (req,res) => {
     try {
-        const {conversationId,role,content,images,artifacts}=req.body
+        const {conversationId,role,content,images,artifacts,workflow,metrics,executionId}=req.body
         const message=await Message.create({
             conversationId,
             content,
             role,
             images,
-            artifacts
+            artifacts,
+            workflow,
+            metrics,
+            executionId
         })
         return res.status(200).json(message)
     } catch (error) {
@@ -63,7 +66,7 @@ export const getMessages=async (req,res) => {
         
         const messages=await Message.find({
             conversationId:req.params.conversationId   
-        })
+        }).sort({ createdAt: 1 })
         return res.status(200).json(messages)
     } catch (error) {
         return res.status(500).json({message:`get messages error ${error}`})

@@ -79,7 +79,10 @@ export const agent = async (req, res, next) => {
         role: "assistant",
         content: result?.aiResponse,
         images: result?.images,
-        artifacts: result?.artifacts
+        artifacts: result?.artifacts,
+        workflow: result?.workflow || null,
+        metrics: result?.metrics || null,
+        executionId: result?.executionId || executionId
       }).catch(err => console.warn("[Chat Service save assistant msg error]", err.message));
     }
 

@@ -34,6 +34,7 @@ import { createConversation } from "../features/createConversation";
 import { addConversation, setConvTitle, setSelectedConversation } from "../redux/conversationSlice";
 import { updateConversation } from "../features/updateConversation";
 import sendMessage, { cancelExecutionRequest } from "../features/sendMessage";
+import getMessages from "../features/getMessages";
 import MessageList from "./MessageList";
 import Nav from "./Nav";
 import TokenEfficiencyWidget from "./TokenEfficiencyWidget";
@@ -52,12 +53,45 @@ export default function CommandCenter({ onViewInsights }) {
   const fileRef = useRef(null);
   const abortControllerRef = useRef(null);
   const inputRef = useRef(null);
+  const loadedConvIdRef = useRef(null);
 
   const { selectedConversation } = useSelector((state) => state.conversation);
   const { messages, isLoading, isStopping, currentExecutionId } = useSelector(
     (state) => state.message
   );
   const dispatch = useDispatch();
+
+  // Load chat history & artifacts seamlessly when switching conversations
+  useEffect(() => {
+    const loadConversationMessages = async () => {
+      const convId = selectedConversation?._id;
+      if (!convId) {
+        loadedConvIdRef.current = null;
+        return;
+      }
+
+      if (loadedConvIdRef.current === convId) return;
+      loadedConvIdRef.current = convId;
+
+      try {
+        const fetchedMessages = await getMessages(convId);
+        if (Array.isArray(fetchedMessages)) {
+          dispatch(setMessages(fetchedMessages));
+          const allArtifacts = [];
+          fetchedMessages.forEach((msg) => {
+            if (Array.isArray(msg.artifacts) && msg.artifacts.length > 0) {
+              allArtifacts.push(...msg.artifacts);
+            }
+          });
+          dispatch(setArtifacts(allArtifacts));
+        }
+      } catch (err) {
+        console.error("[CommandCenter] Error loading conversation messages:", err);
+      }
+    };
+
+    loadConversationMessages();
+  }, [selectedConversation?._id, dispatch]);
 
   // Voice recognition support
   useEffect(() => {
@@ -149,6 +183,7 @@ export default function CommandCenter({ onViewInsights }) {
       const conv = await createConversation();
       if (conv && conv._id) {
         conversation = conv;
+        loadedConvIdRef.current = conv._id;
         dispatch(addConversation(conv));
         dispatch(setSelectedConversation(conv));
       }

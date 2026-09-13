@@ -29,8 +29,19 @@ const messageSchema=new mongoose.Schema({
     },
     content:String,
     images:[String],
-    artifacts:[artifactSchema]
-
+    artifacts:[artifactSchema],
+    workflow:{
+        type:mongoose.Schema.Types.Mixed,
+        default:null
+    },
+    metrics:{
+        type:mongoose.Schema.Types.Mixed,
+        default:null
+    },
+    executionId:{
+        type:String,
+        default:null
+    }
 },{
     timestamps:true
 })

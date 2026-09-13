@@ -1,57 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 @layer base {
   :root {
-    --bg-main: #090a0f;
-    --bg-surface: #0e1117;
-    --bg-elevated: #161b22;
-    --border-subtle: rgba(255, 255, 255, 0.07);
-    --border-strong: rgba(255, 255, 255, 0.14);
-    --accent-blue: #3b82f6;
-    --accent-cyan: #06b6d4;
+    --bg-main: #0a0d14;
+    --bg-surface: #10131a;
+    --bg-surface-low: #191b23;
+    --bg-surface-container: #1d1f27;
+    --bg-surface-high: #272a32;
+    --bg-surface-highest: #32353d;
+    --border-outline: #3c494e;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.16);
+    --accent-cyan: #00d2ff;
+    --accent-indigo: #6366f1;
+    --accent-sky: #38bdf8;
+    --text-primary: #e1e2ec;
+    --text-muted: #859399;
   }
 
   body {
-    background-color: #090a0f;
-    color: #f1f5f9;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #0a0d14;
+    color: #e1e2ec;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
   }
+
+  code, pre, kbd, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
 }
 
-/* Custom minimal scrollbar */
+/* Stitch AI Custom Scrollbars */
+.custom-scrollbar::-webkit-scrollbar,
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 
+.custom-scrollbar::-webkit-scrollbar-track,
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(16, 19, 26, 0.5);
 }
 
+.custom-scrollbar::-webkit-scrollbar-thumb,
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 9999px;
+  background: #32353d;
+  border-radius: 4px;
 }
 
+.custom-scrollbar::-webkit-scrollbar-thumb:hover,
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: #00d2ff;
 }
 
-/* Pulse animation utility */
-@keyframes pulse-subtle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+/* Background Gradients */
+.radial-bg {
+  background-image: radial-gradient(circle at 50% 0%, rgba(0, 210, 255, 0.04) 0%, rgba(10, 13, 20, 0) 65%);
 }
 
-.animate-pulse-subtle {
-  animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+/* Stitch Glow Utilities */
+.shadow-glow-cyan {
+  box-shadow: 0 0 16px rgba(0, 210, 255, 0.28);
 }
 
-/* Linear-style selection */
+.shadow-glow-cyan-sm {
+  box-shadow: 0 0 10px rgba(0, 210, 255, 0.18);
+}
+
+.shadow-glow-indigo {
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.28);
+}
+
+/* Selection */
 ::selection {
-  background: rgba(59, 130, 246, 0.35);
+  background: rgba(0, 210, 255, 0.35);
   color: #ffffff;
 }

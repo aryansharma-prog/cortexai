@@ -52,6 +52,31 @@ export const MODEL_PRICING = {
     inputPerMillion: 0.55,
     outputPerMillion: 2.19,
     provider: "openrouter"
+  },
+  "claude-3-7-sonnet": {
+    inputPerMillion: 3.00,
+    outputPerMillion: 15.00,
+    provider: "claude"
+  },
+  "claude-3-5-sonnet": {
+    inputPerMillion: 3.00,
+    outputPerMillion: 15.00,
+    provider: "claude"
+  },
+  "claude-3-5-haiku": {
+    inputPerMillion: 0.80,
+    outputPerMillion: 4.00,
+    provider: "claude"
+  },
+  "gpt-4o": {
+    inputPerMillion: 2.50,
+    outputPerMillion: 10.00,
+    provider: "openai"
+  },
+  "gpt-4o-mini": {
+    inputPerMillion: 0.15,
+    outputPerMillion: 0.60,
+    provider: "openai"
   }
 };
 

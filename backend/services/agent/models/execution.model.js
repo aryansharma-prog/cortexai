@@ -31,9 +31,12 @@ const subtaskSchema = new mongoose.Schema({
   model: { type: String },
   provider: { type: String },
   selectionReason: { type: String },
+  routingScore: { type: Number },
   trustScore: { type: Number },
   trustClassification: { type: String },
   escalated: { type: Boolean, default: false },
+  continuity: { type: mongoose.Schema.Types.Mixed, default: null },
+  switches: [{ type: mongoose.Schema.Types.Mixed }],
   metrics: { type: mongoose.Schema.Types.Mixed, default: null },
   memory: { type: mongoose.Schema.Types.Mixed, default: null }
 }, { _id: false });

@@ -204,3 +204,4 @@ assert(telemetrySummary.contextReductionPercent >= 0 && telemetrySummary.context
 console.log("\n==================================================");
 console.log(`🎉 ALL ${passedTests}/${totalTests} TESTS PASSED SUCCESSFULLY!`);
 console.log("==================================================");
+process.exit(0);

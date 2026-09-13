@@ -203,3 +203,4 @@ assert(pdfRagMeta && pdfRagMeta.capabilities.includes("pdf-rag"), "PDF RAG agent
 console.log("\n==================================================");
 console.log(`🎉 ALL ${passedTests}/${totalTests} TESTS PASSED SUCCESSFULLY!`);
 console.log("==================================================");
+process.exit(0);

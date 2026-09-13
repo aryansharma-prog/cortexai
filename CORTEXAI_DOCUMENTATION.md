@@ -546,3 +546,39 @@ CortexAI’s core product differentiator is **Intelligent Token Efficiency**. Tr
   * Outlines technical mechanisms (Shared Memory, Selective Context, Adaptive Routing, Response Optimization).
   * Never invents numbers: aggregates live data from MongoDB `Execution` records and active WebSocket/SSE messages.
 
+---
+
+## 7. Multi-Provider Architecture & Cortex Continuity
+
+### 7.1 Separation of Agent Selection vs Model Selection
+CortexAI decomposes workflow orchestration into two distinct decisions:
+1. **Decision 1 (Agent Role)**: *"What kind of agent should solve this subtask?"* (e.g., Coding Agent, Vision Agent, Analysis Agent, Search Agent).
+2. **Decision 2 (Model Router)**: *"Which provider/model should power that agent?"* (e.g., Claude 3.7 Sonnet, Gemini 2.5 Flash, Groq Llama 3.3 70B, DeepSeek V3).
+
+### 7.2 Multi-Criteria Model Routing Scoring Engine
+The Model Router evaluates candidate models using normalized multi-factor scoring:
+$$\text{RoutingScore} = w_{\text{cap}} \cdot \text{CapabilityFit} + w_{\text{qual}} \cdot \text{Quality} + w_{\text{eff}} \cdot \text{TokenEfficiency} + w_{\text{avail}} \cdot \text{Availability} + w_{\text{rel}} \cdot \text{Reliability} + w_{\text{ctx}} \cdot \text{ContextSuitability}$$
+
+* **Capability Fit**: Strict modality filtering (e.g. vision requirements exclude pure-text models; image generation routes strictly to visual engines).
+* **Token Efficiency**: Balances expected cost per million tokens and execution latency against task complexity.
+* **User BYOK Key Isolation**: Filters candidates strictly to providers connected by the authenticated user (`req.headers["x-user-id"]`) or platform defaults. Decrypted credentials (AES-256-GCM) are held only in server-side memory at invocation time.
+
+### 7.3 Model Failure Classification & Circuit Breaker
+Runtime model errors are classified into distinct failure categories:
+* `RATE_LIMIT` / `QUOTA`: HTTP 429 / TPM / RPM exhaustion -> puts provider into cooldown and triggers immediate failover.
+* `KEY_CONFIGURATION`: HTTP 401 / 403 invalid key -> disables provider for session.
+* `CAPABILITY_MISMATCH`: Context length exceeded or unsupported parameter -> reroutes to higher-capacity model.
+* `RETRYABLE`: Transient 500 / 502 / 503 / 504 / timeout.
+
+### 7.4 Cortex Continuity & Structured Context Handoff
+When a provider encounters a rate limit or failure:
+1. **Zero Task Restart**: The workflow never restarts and never dumps raw, noisy chat history into the replacement model.
+2. **Checkpoint Synthesis**: Structured state is pulled from the **Shared Notebook**:
+   * Verified completed milestones
+   * Remaining subtask requirements
+   * Domain constraints and decisions
+   * Non-alarming failover reason
+3. **Provider-Specific Adaptation**: Instructions and memory context are normalized for the replacement provider format (Gemini, Claude, Groq, DeepSeek).
+4. **Execution & Trust Verification**: The subtask executes on the new model and passes through Trust Evaluation before re-integration.
+
+

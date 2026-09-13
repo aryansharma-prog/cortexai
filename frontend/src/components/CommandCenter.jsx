@@ -38,6 +38,7 @@ import sendMessage, { cancelExecutionRequest } from "../features/sendMessage";
 import getMessages from "../features/getMessages";
 import MessageList from "./MessageList";
 import TelemetryInspector from "./TelemetryInspector";
+import TokenEfficiencyCircle from "./TokenEfficiencyCircle";
 
 export default function CommandCenter({ onViewInsights }) {
   const [prompt, setPrompt] = useState("");
@@ -258,8 +259,9 @@ export default function CommandCenter({ onViewInsights }) {
 
   return (
     <div className="flex-1 flex min-w-0 bg-[#faf8f5] text-slate-900 overflow-hidden h-screen relative">
-      {/* Floating Telemetry Toggle Trigger (As in Stitch) */}
-      <div className="fixed top-5 right-6 z-30">
+      {/* Floating Header Actions (Token Efficiency Circle + Telemetry Toggle) */}
+      <div className="fixed top-5 right-6 z-30 flex items-center gap-2.5">
+        <TokenEfficiencyCircle />
         <button
           onClick={() => setIsInspectorOpen(!isInspectorOpen)}
           title="Toggle Live Telemetry & Artifacts"

@@ -1,18 +1,12 @@
 import React, { useState, useEffect } from "react";
 import {
   Terminal,
-  Activity,
   Layers,
-  FileCode,
-  Zap,
-  User,
   Plus,
   PanelLeft,
   PanelRight,
   Menu,
-  X,
   Settings,
-  BookOpen,
   MessageSquare
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
@@ -27,6 +21,7 @@ import {
 } from "../redux/messageSlice";
 import { getConversations } from "../features/getConversations";
 import getMessages from "../features/getMessages";
+import TokenEfficiencyCircle from "./TokenEfficiencyCircle";
 
 export default function NavigationSidebar({
   activeTab,
@@ -88,10 +83,7 @@ export default function NavigationSidebar({
 
   const navItems = [
     { id: "command", label: "Command Center", icon: Terminal },
-    { id: "runs", label: "Execution Runs", icon: Activity, count: conversations?.length || 14 },
     { id: "models", label: "Model Pool", icon: Layers },
-    { id: "knowledge", label: "Shared Knowledge", icon: BookOpen },
-    { id: "insights", label: "Token Efficiency", icon: Zap, badge: "41.8%" },
     { id: "profile", label: "Settings", icon: Settings }
   ];
 

@@ -7,20 +7,17 @@ import { useDispatch, useSelector } from "react-redux";
 import { setUserdata } from "../redux/userSlice";
 import NavigationSidebar from "../components/NavigationSidebar";
 import CommandCenter from "../components/CommandCenter";
-import RunsView from "../components/RunsView";
 import ModelPoolView from "../components/ModelPoolView";
-import KnowledgeView from "../components/KnowledgeView";
-import InsightsView from "../components/InsightsView";
 import ProfileView from "../components/ProfileView";
 import Artifact from "../components/Artifact";
 import OnboardingModal from "../components/OnboardingModal";
-import { Loader2, AlertCircle, Sparkles, ShieldCheck, Terminal } from "lucide-react";
+import { Loader2, AlertCircle, ShieldCheck } from "lucide-react";
 
 function Home() {
   const { userData } = useSelector((state) => state.user);
   const dispatch = useDispatch();
 
-  const [activeTab, setActiveTab] = useState("command"); // "command" | "runs" | "models" | "knowledge" | "insights" | "profile"
+  const [activeTab, setActiveTab] = useState("command"); // "command" | "models" | "profile"
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -109,13 +106,8 @@ function Home() {
 
       {/* Main View Area */}
       <main className="flex-1 flex flex-col min-w-0 bg-[#faf8f5] overflow-hidden">
-        {activeTab === "command" && (
-          <CommandCenter onViewInsights={() => setActiveTab("insights")} />
-        )}
-        {activeTab === "runs" && <RunsView />}
+        {activeTab === "command" && <CommandCenter />}
         {activeTab === "models" && <ModelPoolView />}
-        {activeTab === "knowledge" && <KnowledgeView />}
-        {activeTab === "insights" && <InsightsView />}
         {activeTab === "profile" && <ProfileView />}
       </main>
 

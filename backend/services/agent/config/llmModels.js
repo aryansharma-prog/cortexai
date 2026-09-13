@@ -3,6 +3,8 @@ dotenv.config();
 import { ChatGroq } from "@langchain/groq";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatOpenRouter } from "@langchain/openrouter";
+import { createModelClient } from "../orchestration/modelClientFactory.js";
+import { getModelById } from "../orchestration/modelRegistry.js";
 
 /**
  * Centralized Model Registry Configuration
@@ -51,7 +53,16 @@ export const openrouter = isOpenRouterConfigured
     })
   : groq;
 
-export const getModel = async (agent) => {
+export const getModel = async (agent, options = {}) => {
+  if (options.modelIdentifier || options.model || options.provider) {
+    const spec = getModelById(options.modelIdentifier || options.model) || {
+      provider: options.provider || "groq",
+      modelIdentifier: options.modelIdentifier || options.model || MODEL_CONFIG.groq.primary
+    };
+    const client = await createModelClient(spec, options.userId, options);
+    return client.llm;
+  }
+
   switch (agent) {
     case "chat":
       return groq;
@@ -87,8 +98,21 @@ export const getModel = async (agent) => {
  * Returns model instance alongside normalized metadata (model name, provider)
  * for observability and token/cost tracking.
  */
-export const getModelWithMeta = async (agent) => {
-  const llm = await getModel(agent);
+export const getModelWithMeta = async (agent, options = {}) => {
+  if (options.modelIdentifier || options.model || options.provider) {
+    const spec = getModelById(options.modelIdentifier || options.model) || {
+      provider: options.provider || "groq",
+      modelIdentifier: options.modelIdentifier || options.model || MODEL_CONFIG.groq.primary
+    };
+    const client = await createModelClient(spec, options.userId, options);
+    return {
+      llm: client.llm,
+      modelName: client.modelName,
+      provider: client.provider
+    };
+  }
+
+  const llm = await getModel(agent, options);
   let modelName = MODEL_CONFIG.groq.primary;
   let provider = "groq";
 

@@ -33,9 +33,10 @@ import { selectDynamicAgent } from "./dynamicAgentSelector.js";
 import { SharedMemory } from "./sharedMemory.js";
 import { evaluateTrust } from "./trustEvaluator.js";
 import { handleTaskEscalation } from "./escalationManager.js";
-import { CostTracker } from "../observability/costTracker.js";
 import { evaluateResponsePolicy } from "./responsePolicyEngine.js";
 import { validateAndRefineResponse } from "./responseValidator.js";
+import { selectModelForTask } from "./modelRouter.js";
+import { executeCortexContinuityFailover } from "./cortexContinuity.js";
 
 /**
  * Publishes real-time execution event to Redis and updates active state.
@@ -101,16 +102,33 @@ export const executeLeafTask = async (taskNode, state, executionId, sharedMemory
   const agentType = taskNode.selectedAgent || taskNode.agentType || "chat";
   const agentInfo = getAgentById(agentType) || { name: taskNode.name || agentType, id: agentType, model: "openai/gpt-oss-120b", provider: "groq" };
 
+  // Decision 2: Model Router dynamically selects best available compatible model
+  const routerSelection = await selectModelForTask(taskNode, {
+    userId: state.userId,
+    complexityScore: taskNode.complexityScore || 40,
+    prompt: taskNode.description || state.prompt
+  });
+
+  const effectiveModel = routerSelection.hasCompatibleModel ? routerSelection.modelIdentifier : (taskNode.model || agentInfo.model);
+  const effectiveProvider = routerSelection.hasCompatibleModel ? routerSelection.provider : (taskNode.provider || agentInfo.provider);
+
+  taskNode.model = effectiveModel;
+  taskNode.provider = effectiveProvider;
+  taskNode.routingScore = routerSelection.routingScore;
+  taskNode.selectionReason = routerSelection.rationale;
+  taskNode.alternativesConsidered = routerSelection.alternativesConsidered;
+
   const startedAt = Date.now();
-  console.log(`[EXECUTION] Starting task node="${taskNode.name}" (Agent=${agentType}, Model=${agentInfo.model || 'default'})`);
+  console.log(`[EXECUTION] Starting task node="${taskNode.name}" (Agent=${agentType}, Model=${effectiveModel}, Provider=${effectiveProvider})`);
 
   await emitExecutionEvent(executionId, "agent_started", {
     subtaskId,
     nodeId: subtaskId,
     agentId: agentType,
     agentName: agentInfo.name,
-    model: agentInfo.model,
-    provider: agentInfo.provider,
+    model: effectiveModel,
+    provider: effectiveProvider,
+    routingScore: routerSelection.routingScore,
     status: "running",
     activitySummary: taskNode.activitySummary || `Executing ${agentInfo.name}...`
   });
@@ -402,6 +420,22 @@ export const executeLeafTask = async (taskNode, state, executionId, sharedMemory
     }
 
     console.error(`[Error executing task ${subtaskId}]`, err);
+
+    // Trigger Cortex Continuity seamless failover
+    const continuityResult = await executeCortexContinuityFailover({
+      taskNode,
+      error: err,
+      currentModelMeta: { model: taskNode.model || agentInfo.model, provider: taskNode.provider || agentInfo.provider },
+      state,
+      sharedMemory,
+      emitEvent: emitExecutionEvent
+    });
+
+    if (continuityResult && continuityResult.status === "completed") {
+      console.log(`[CORTEX CONTINUITY SUCCESS] Task "${taskNode.name}" recovered seamlessly from notebook state.`);
+      return continuityResult;
+    }
+
     const durationMs = Date.now() - startedAt;
 
     const failedMetrics = {
@@ -409,7 +443,7 @@ export const executeLeafTask = async (taskNode, state, executionId, sharedMemory
       subtaskId,
       name: agentInfo.name,
       status: "failed",
-      error: err.message,
+      error: continuityResult?.error || err.message,
       durationMs
     };
 
@@ -425,7 +459,7 @@ export const executeLeafTask = async (taskNode, state, executionId, sharedMemory
       agentId: agentType,
       agentName: agentInfo.name,
       status: "failed",
-      error: err.message,
+      error: continuityResult?.error || err.message,
       metrics: failedMetrics,
       trust: trustFailed
     });
@@ -436,12 +470,13 @@ export const executeLeafTask = async (taskNode, state, executionId, sharedMemory
       agentId: agentType,
       name: agentInfo.name,
       status: "failed",
-      error: err.message,
-      output: null,
+      error: continuityResult?.error || err.message,
+      output: continuityResult?.output || null,
       images: [],
       artifacts: [],
       metrics: failedMetrics,
-      trust: trustFailed
+      trust: trustFailed,
+      continuity: continuityResult?.continuity || null
     };
   }
 };
@@ -588,6 +623,10 @@ export const runAdaptiveOrchestration = async (state) => {
             status: res.status,
             output: res.output,
             metrics: res.metrics,
+            model: leafNode.model || res.metrics?.model,
+            provider: leafNode.provider || res.metrics?.provider,
+            routingScore: leafNode.routingScore,
+            continuity: res.continuity || leafNode.continuity,
             trustScore: res.trust?.trustScore,
             trustClassification: res.trust?.trustClassification,
             trustDetails: res.trust?.details,
@@ -746,12 +785,15 @@ export const runAdaptiveOrchestration = async (state) => {
         selectedAgent: node.selectedAgent,
         model: node.model,
         provider: node.provider,
+        routingScore: node.routingScore,
         selectionReason: node.selectionReason,
         status: node.status,
         metrics: node.metrics,
         trustScore: node.trustScore,
         trustClassification: node.trustClassification,
         escalated: node.escalated,
+        continuity: node.continuity,
+        switches: node.switches,
         memory: node.memory
       }))
     };

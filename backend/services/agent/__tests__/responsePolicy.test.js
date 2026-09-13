@@ -211,3 +211,4 @@ for (const item of arbitraryQueries) {
 console.log("\n==================================================");
 console.log(`🎉 ALL ${passedTests}/${totalTests} TESTS PASSED SUCCESSFULLY!`);
 console.log("==================================================");
+process.exit(0);

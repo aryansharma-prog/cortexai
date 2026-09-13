@@ -24,21 +24,23 @@ export const cancelExecution = async (executionId) => {
 
   inMemoryCancelledTasks.add(executionId);
 
-  try {
-    const redisKey = `cancellation:${executionId}`;
-    const channelKey = `execution_events:${executionId}`;
+  if (redis && redis.status === "ready") {
+    try {
+      const redisKey = `cancellation:${executionId}`;
+      const channelKey = `execution_events:${executionId}`;
 
-    await redis.set(redisKey, "cancelled", "EX", 3600); // 1 hour TTL
-    await redis.publish(channelKey, JSON.stringify({
-      executionId,
-      type: "workflow_cancelled",
-      timestamp: new Date().toISOString(),
-      message: "Research task was cancelled by user."
-    }));
+      await redis.set(redisKey, "cancelled", "EX", 3600); // 1 hour TTL
+      await redis.publish(channelKey, JSON.stringify({
+        executionId,
+        type: "workflow_cancelled",
+        timestamp: new Date().toISOString(),
+        message: "Research task was cancelled by user."
+      }));
 
-    console.log(`[CancellationManager] Execution ${executionId} marked as cancelled.`);
-  } catch (err) {
-    console.warn(`[CancellationManager] Redis cancellation publish warning for ${executionId}:`, err.message);
+      console.log(`[CancellationManager] Execution ${executionId} marked as cancelled.`);
+    } catch (err) {
+      console.warn(`[CancellationManager] Redis cancellation publish warning for ${executionId}:`, err.message);
+    }
   }
 };
 
@@ -54,14 +56,16 @@ export const isExecutionCancelled = async (executionId) => {
     return true;
   }
 
-  try {
-    const status = await redis.get(`cancellation:${executionId}`);
-    if (status === "cancelled") {
-      inMemoryCancelledTasks.add(executionId);
-      return true;
+  if (redis && redis.status === "ready") {
+    try {
+      const status = await redis.get(`cancellation:${executionId}`);
+      if (status === "cancelled") {
+        inMemoryCancelledTasks.add(executionId);
+        return true;
+      }
+    } catch (err) {
+      // If Redis check fails, fallback to in-memory set
     }
-  } catch (err) {
-    // If Redis check fails, fallback to in-memory set
   }
 
   return false;

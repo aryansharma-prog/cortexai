@@ -1,7 +1,7 @@
 /**
  * Execution Tree Data Structure
  * Represents hierarchical task decompositions, node execution states,
- * complexity factors, selected agents, trust scores, and metrics.
+ * complexity factors, selected agents, model routing metadata, continuity events, trust scores, and metrics.
  */
 
 export class ExecutionTreeNode {
@@ -19,6 +19,7 @@ export class ExecutionTreeNode {
     selectedAgent = null,
     model = null,
     provider = null,
+    routingScore = null,
     selectionReason = "",
     alternativesConsidered = [],
     status = "pending", // pending, running, completed, failed, escalated, cancelled
@@ -30,6 +31,8 @@ export class ExecutionTreeNode {
     children = [],
     isLeaf = true,
     escalated = false,
+    continuity = null, // { attempted: boolean, success: boolean, fromProvider, toProvider, reason }
+    switches = [],
     activitySummary = "",
     memory = null
   }) {
@@ -46,6 +49,7 @@ export class ExecutionTreeNode {
     this.selectedAgent = selectedAgent || agentType;
     this.model = model;
     this.provider = provider;
+    this.routingScore = routingScore;
     this.selectionReason = selectionReason;
     this.alternativesConsidered = alternativesConsidered;
     this.status = status;
@@ -57,6 +61,8 @@ export class ExecutionTreeNode {
     this.children = children;
     this.isLeaf = isLeaf;
     this.escalated = escalated;
+    this.continuity = continuity;
+    this.switches = switches;
     this.activitySummary = activitySummary;
     this.memory = memory;
     this.createdAt = new Date().toISOString();
@@ -91,6 +97,7 @@ export class ExecutionTreeNode {
       selectedAgent: this.selectedAgent,
       model: this.model,
       provider: this.provider,
+      routingScore: this.routingScore,
       selectionReason: this.selectionReason,
       alternativesConsidered: this.alternativesConsidered,
       status: this.status,
@@ -103,13 +110,15 @@ export class ExecutionTreeNode {
       children: this.children.map(c => (c instanceof ExecutionTreeNode ? c.toJSON() : c)),
       isLeaf: this.isLeaf,
       escalated: this.escalated,
+      continuity: this.continuity,
+      switches: this.switches,
       activitySummary: this.activitySummary
     };
   }
 }
 
 export class ExecutionTree {
-  constructor(rootId = "root", rootName = "Main Task", description = "") {
+  constructor(rootId = "root", rootName = "User Objective", description = "") {
     this.root = new ExecutionTreeNode({
       id: rootId,
       name: rootName,
@@ -183,6 +192,7 @@ export class ExecutionTree {
     const completedLeaves = leafNodes.filter(n => n.status === "completed");
     const failedLeaves = leafNodes.filter(n => n.status === "failed");
     const escalatedNodes = allNodes.filter(n => n.escalated);
+    const continuityNodes = allNodes.filter(n => n.continuity && n.continuity.attempted);
 
     let totalTokens = 0;
     let totalDurationMs = 0;
@@ -192,9 +202,14 @@ export class ExecutionTree {
     let totalContextTokensSaved = 0;
     let totalContextTokensSelected = 0;
     const agentsUsedSet = new Set();
+    const modelsUsedSet = new Set();
+    const providersUsedSet = new Set();
 
     leafNodes.forEach(leaf => {
       if (leaf.selectedAgent) agentsUsedSet.add(leaf.selectedAgent);
+      if (leaf.model) modelsUsedSet.add(leaf.model);
+      if (leaf.provider) providersUsedSet.add(leaf.provider);
+
       if (leaf.metrics) {
         if (leaf.metrics.totalTokens) totalTokens += leaf.metrics.totalTokens;
         if (leaf.metrics.durationMs) totalDurationMs += leaf.metrics.durationMs;
@@ -219,7 +234,10 @@ export class ExecutionTree {
       failedTasks: failedLeaves.length,
       maxDepth: this.getMaxDepth(),
       agentsUsed: Array.from(agentsUsedSet),
+      modelsUsed: Array.from(modelsUsedSet),
+      providersUsed: Array.from(providersUsedSet),
       escalations: escalatedNodes.length,
+      providerSwitches: continuityNodes.length,
       totalTokens: totalTokens > 0 ? totalTokens : null,
       totalDurationMs,
       estimatedCost: Number(estimatedCost.toFixed(6)),

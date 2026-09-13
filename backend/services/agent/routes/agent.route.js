@@ -6,6 +6,7 @@ import {
   agent,
   cancelExecutionHandler,
   getExecution,
+  listExecutions,
   getExecutionMetrics,
   streamExecution,
   getResearchAnalytics
@@ -20,6 +21,9 @@ const router = express.Router();
 
 // Main chat & research execution endpoint
 router.post("/chat", multer.single("file"), agent);
+
+// List all past executions
+router.get("/executions", listExecutions);
 
 // Stop / Cancel research execution endpoints
 router.post("/executions/:executionId/cancel", cancelExecutionHandler);

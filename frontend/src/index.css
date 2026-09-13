@@ -1,1 +1,57 @@
 @import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-main: #090a0f;
+    --bg-surface: #0e1117;
+    --bg-elevated: #161b22;
+    --border-subtle: rgba(255, 255, 255, 0.07);
+    --border-strong: rgba(255, 255, 255, 0.14);
+    --accent-blue: #3b82f6;
+    --accent-cyan: #06b6d4;
+  }
+
+  body {
+    background-color: #090a0f;
+    color: #f1f5f9;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom minimal scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Pulse animation utility */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Linear-style selection */
+::selection {
+  background: rgba(59, 130, 246, 0.35);
+  color: #ffffff;
+}

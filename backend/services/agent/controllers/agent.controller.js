@@ -201,6 +201,31 @@ export const getExecution = async (req, res, next) => {
 };
 
 /**
+ * List past task executions with status, strategy, and telemetry
+ * GET /api/agent/executions
+ */
+export const listExecutions = async (req, res, next) => {
+  try {
+    const userId = req.headers["x-user-id"];
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+    const query = {};
+    if (userId && userId !== "anonymous") {
+      query.userId = userId;
+    }
+
+    const records = await Execution.find(query)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .select("executionId prompt taskType complexity executionStrategy scores totalTokens totalDurationMs estimatedCost agentExecutions sharedMemorySummary responsePolicy executionTree success createdAt");
+
+    return res.status(200).json(records);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+/**
  * Get execution token, latency, and cost metrics
  * GET /api/agent/executions/:executionId/metrics
  */

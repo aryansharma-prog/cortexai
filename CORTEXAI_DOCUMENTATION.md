@@ -380,6 +380,31 @@ $$\text{Explicit User Intent} \succ \text{Intrinsic Task Type} \succ \text{Task 
   taskType: { type: String, default: "general" },
   complexity: { type: String, enum: ["low", "medium", "high", "EASY", "MEDIUM", "COMPLEX", "cancelled", "fallback"] },
   executionStrategy: { type: String, default: "single" },
+  responsePolicy: {
+    depth: { type: String, enum: ["MINIMAL", "SHORT", "FOCUSED", "DETAILED"] },
+    mode: String,
+    taskComplexity: String,
+    taskType: String,
+    targetTokens: Number,
+    maxTokens: Number,
+    actualTokens: Number,
+    verbosity: String,
+    compressionTriggered: Boolean,
+    originalTokens: Number,
+    finalTokens: Number,
+    reason: String,
+    userIntentOverride: Boolean
+  },
+  sharedMemorySummary: {
+    memoryVersion: Number,
+    entriesCreated: Number,
+    entriesUsed: Number,
+    entriesSkipped: Number,
+    fullContextTokensEstimate: Number,
+    selectedContextTokens: Number,
+    tokensSavedEstimate: Number,
+    contextReductionPercent: Number
+  },
   scores: {
     complexityScore: Number,
     decomposabilityScore: Number,
@@ -405,7 +430,8 @@ $$\text{Explicit User Intent} \succ \text{Intrinsic Task Type} \succ \text{Task 
       trustClassification: String,
       escalated: Boolean,
       status: String,
-      metrics: Object
+      metrics: Object,
+      memory: Object
     }
   ],
   executionTree: Object, // Hierarchical tree with nested children
@@ -448,8 +474,75 @@ $$\text{Explicit User Intent} \succ \text{Intrinsic Task Type} \succ \text{Task 
 | `GET` | `/api/agent/executions/:id` | Agent (`8003`) | Session | Fetches execution tree state and subtask statuses |
 | `GET` | `/api/agent/executions/:id/stream`| Agent (`8003`)| Session | SSE endpoint for live execution tree telemetry & progress |
 | `POST` | `/api/agent/executions/:id/cancel`| Agent (`8003`)| Session | Cancels active background research pipeline |
-| `GET` | `/api/agent/research/analytics` | Agent (`8003`) | Session | Returns scientific metrics across all strategies |
+| `GET` | `/api/agent/research/analytics` | Agent (`8003`) | Session | Returns scientific metrics across all strategies & aggregate token efficiency |
 | `GET` | `/api/agent/downloads/:filename`| Agent (`8003`) | Public | Downloads generated PDF/PPT/Image artifacts |
 | `GET` | `/api/chat/conversations` | Chat (`8002`) | Session | Lists user conversation history |
 | `POST` | `/api/billing/create-order` | Billing (`8004`)| Session | Generates Razorpay checkout order |
 | `POST` | `/api/billing/verify-payment` | Billing (`8004`)| Session | Verifies Razorpay signature and increments credits |
+
+---
+
+## ⚡ 6. Token Efficiency & Intelligent Context Reduction Architecture
+
+CortexAI’s core product differentiator is **Intelligent Token Efficiency**. Traditional multi-agent systems naively broadcast full chat history and intermediate execution outputs to every agent, causing quadratic context token growth $O(N^2)$, excessive latency, and runaway token utilization. CortexAI solves this through four tightly integrated architectural systems:
+
+```
+                            ┌────────────────────────────────────────┐
+                            │          USER QUERY / TASK             │
+                            └───────────────────┬────────────────────┘
+                                                │
+                                                ▼
+                            ┌────────────────────────────────────────┐
+                            │    1. Recursive Task Decomposition     │
+                            │    & Complexity-Based Model Routing    │
+                            │   (Groq 8B for easy / Gemini for hard) │
+                            └───────────────────┬────────────────────┘
+                                                │
+                                                ▼
+                            ┌────────────────────────────────────────┐
+                            │    2. Shared Incremental Memory        │
+                            │  • Delta-versioned memory entries      │
+                            │  • Selective dependency scoping        │
+                            │  • In-memory fact & artifact cache     │
+                            └───────────────────┬────────────────────┘
+                                                │
+                                                ▼
+                            ┌────────────────────────────────────────┐
+                            │    3. Adaptive Response Policy Engine  │
+                            │  • Dynamic depth (MINIMAL/SHORT/...)   │
+                            │  • Token budget allocation             │
+                            │  • Semantic compression validator      │
+                            └───────────────────┬────────────────────┘
+                                                │
+                                                ▼
+                            ┌────────────────────────────────────────┐
+                            │    4. Telemetry Aggregation & UI       │
+                            │  • Real-time token savings computation │
+                            │  • Nav badge & Insights telemetry      │
+                            └────────────────────────────────────────┘
+```
+
+### 6.1 Shared Incremental Memory (`SharedMemory`)
+* **Atomic Fact & Result Extraction**: Extracts discrete facts, numerical data, source citations, and code blocks from subtask outputs without redundant LLM calls.
+* **Selective Context Scoping**: When an agent executes a leaf subtask, only entries from its explicit dependency graph (`node.dependencies`) and general high-confidence facts are compiled into context.
+* **Token Savings Calculation**:
+  $$\text{TokensSaved} = \max(0, \text{FullContextEstimate} - \text{SelectedContextTokens})$$
+  $$\text{ReductionPercentage} = \frac{\text{TokensSaved}}{\text{FullContextEstimate}} \times 100\%$$
+* **Delta Versioning**: Tracks `memoryVersion` per execution. Subtasks receive incremental diffs since their `lastSeenVersion` rather than full snapshots.
+
+### 6.2 Adaptive Response Policy Engine (`ResponsePolicyEngine`)
+* Dynamically determines response depth:
+  * **MINIMAL** (≤ 150 tokens): Direct answers for trivial factual queries (e.g. "Capital of India").
+  * **SHORT** (≤ 400 tokens): Concise explanations for simple lookups or brief summaries.
+  * **FOCUSED** (≤ 1,000 tokens): Balanced structure for standard research and multi-aspect queries.
+  * **DETAILED** (≤ 2,500 tokens): Exhaustive analytical reports for complex cross-domain investigations.
+* **Response Validator & Semantic Compressor**: Detects if an output exceeds the target depth budget and performs targeted semantic compression while preserving key insights and citations.
+
+### 6.3 Dashboard Integration & Insights View
+* **Header Token Efficiency Indicator**: Compact, unobtrusive indicator in `Nav.jsx` showing context reduction percentage (e.g. `⚡ ↓ 41.7% less context`) without intrusive advertisement style.
+* **Dedicated Insights Modal (`TokenInsightsModal.jsx`)**:
+  * Displays **Tokens Saved**, **Context Reduction %**, and **Execution Runs**.
+  * Shows visual comparative progress bars (**Estimated Full Context** vs **CortexAI Context**).
+  * Outlines technical mechanisms (Shared Memory, Selective Context, Adaptive Routing, Response Optimization).
+  * Never invents numbers: aggregates live data from MongoDB `Execution` records and active WebSocket/SSE messages.
+

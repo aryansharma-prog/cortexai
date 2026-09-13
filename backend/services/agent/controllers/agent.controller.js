@@ -314,6 +314,49 @@ export const getResearchAnalytics = async (req, res, next) => {
   try {
     const totalCount = await Execution.countDocuments();
 
+    // 1. Calculate aggregated real token efficiency metrics across all runs
+    const tokenEfficiencyStats = await Execution.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalExecutions: { $sum: 1 },
+          totalTokensUsed: { $sum: { $ifNull: ["$totalTokens", 0] } },
+          totalTokensSaved: { $sum: { $ifNull: ["$sharedMemorySummary.tokensSavedEstimate", 0] } },
+          totalFullContextRequested: { $sum: { $ifNull: ["$sharedMemorySummary.fullContextTokensEstimate", 0] } },
+          totalSelectedTokensDelivered: { $sum: { $ifNull: ["$sharedMemorySummary.selectedContextTokens", 0] } },
+          totalCompressionSaved: {
+            $sum: {
+              $cond: [
+                { $and: ["$responsePolicy.compressionTriggered", { $gt: ["$responsePolicy.originalTokens", "$responsePolicy.finalTokens"] }] },
+                { $subtract: ["$responsePolicy.originalTokens", "$responsePolicy.finalTokens"] },
+                0
+              ]
+            }
+          },
+          avgDurationMs: { $avg: "$totalDurationMs" }
+        }
+      }
+    ]);
+
+    const efficiency = tokenEfficiencyStats[0] || {
+      totalExecutions: totalCount,
+      totalTokensUsed: 0,
+      totalTokensSaved: 0,
+      totalFullContextRequested: 0,
+      totalSelectedTokensDelivered: 0,
+      totalCompressionSaved: 0,
+      avgDurationMs: 0
+    };
+
+    // Calculate aggregated context reduction percentage
+    const combinedFullContext = efficiency.totalFullContextRequested > 0
+      ? efficiency.totalFullContextRequested
+      : (efficiency.totalTokensUsed + efficiency.totalTokensSaved);
+
+    const aggregateReductionPercent = combinedFullContext > 0
+      ? Number(((efficiency.totalTokensSaved / combinedFullContext) * 100).toFixed(1))
+      : 0;
+
     const strategyStats = await Execution.aggregate([
       {
         $group: {
@@ -352,11 +395,48 @@ export const getResearchAnalytics = async (req, res, next) => {
     const recentExecutions = await Execution.find()
       .sort({ createdAt: -1 })
       .limit(20)
-      .select("executionId taskType complexity executionStrategy scores totalTokens totalDurationMs estimatedCost success createdAt");
+      .select("executionId taskType complexity executionStrategy scores totalTokens totalDurationMs sharedMemorySummary responsePolicy success createdAt");
 
     return res.status(200).json({
       summary: {
-        totalExecutions: totalCount
+        totalExecutions: totalCount,
+        tokensSaved: efficiency.totalTokensSaved,
+        contextReductionPercent: aggregateReductionPercent,
+        fullContextTokens: combinedFullContext,
+        deliveredContextTokens: efficiency.totalSelectedTokensDelivered || efficiency.totalTokensUsed,
+        compressionTokensSaved: efficiency.totalCompressionSaved,
+        avgDurationMs: Math.round(efficiency.avgDurationMs || 0)
+      },
+      tokenEfficiency: {
+        tokensSaved: efficiency.totalTokensSaved,
+        contextReductionPercent: aggregateReductionPercent,
+        totalExecutions: totalCount,
+        fullContextEstimate: combinedFullContext,
+        cortexContext: efficiency.totalSelectedTokensDelivered || efficiency.totalTokensUsed,
+        mechanisms: {
+          sharedMemory: {
+            name: "Shared Incremental Memory",
+            description: "Eliminates redundant agent context retransmission by sharing delta memory states.",
+            tokensSaved: efficiency.totalTokensSaved,
+            active: true
+          },
+          selectiveContext: {
+            name: "Selective Context Scoping",
+            description: "Delivers only strictly required dependency outputs rather than full chat history.",
+            active: true
+          },
+          adaptiveRouting: {
+            name: "Adaptive Agent Routing",
+            description: "Routes subtasks to lightweight capable models (e.g. Llama 3 8B) for lower footprint.",
+            active: true
+          },
+          responseOptimization: {
+            name: "Response Policy Engine",
+            description: "Dynamically constrains token budgets and applies semantic compression for concise answers.",
+            tokensSaved: efficiency.totalCompressionSaved,
+            active: true
+          }
+        }
       },
       strategyBreakdown: strategyStats,
       complexityBreakdown: complexityStats,

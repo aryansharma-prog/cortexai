@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   Settings,
-  BookOpen
+  BookOpen,
+  MessageSquare
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -221,6 +222,47 @@ export default function NavigationSidebar({
               );
             })}
           </nav>
+
+          {/* Chat History / Recent Conversations */}
+          <div className="mt-4 px-2.5 border-t border-stone-200/80 pt-3">
+            <div className="flex items-center justify-between px-1 mb-1.5">
+              <span className="text-[10px] font-mono uppercase text-slate-400 font-semibold tracking-wider">
+                Chat History
+              </span>
+              <span className="text-[10px] font-mono text-orange-600 bg-orange-50 px-1.5 py-0.2 rounded border border-orange-200/50 font-semibold">
+                {conversations?.length || 0}
+              </span>
+            </div>
+            <div className="space-y-0.5 max-h-[calc(100vh-420px)] overflow-y-auto custom-scrollbar pr-0.5">
+              {conversations && conversations.length > 0 ? (
+                conversations.map((conv) => {
+                  const isSel = selectedConversation?._id === conv._id && activeTab === "command";
+                  return (
+                    <button
+                      key={conv._id}
+                      onClick={() => handleSelectConv(conv)}
+                      className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs truncate flex items-center gap-2 transition-all border-none cursor-pointer ${
+                        isSel
+                          ? "bg-orange-50 text-orange-700 font-semibold border-l-2 border-orange-600 shadow-2xs"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-stone-50 bg-transparent"
+                      }`}
+                      title={conv.title || "Untitled Conversation"}
+                    >
+                      <MessageSquare
+                        size={13}
+                        className={isSel ? "text-orange-600 shrink-0" : "text-slate-400 shrink-0"}
+                      />
+                      <span className="truncate">{conv.title || "Untitled Conversation"}</span>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="text-[11px] text-slate-400 font-mono px-2 py-2 italic text-center">
+                  No previous chats
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Footer Cluster: Online Status & Operator Profile */}

@@ -35,6 +35,7 @@ import { createConversation } from "../features/createConversation";
 import { addConversation, setConvTitle, setSelectedConversation } from "../redux/conversationSlice";
 import { updateConversation } from "../features/updateConversation";
 import sendMessage, { cancelExecutionRequest } from "../features/sendMessage";
+import getMessages from "../features/getMessages";
 import MessageList from "./MessageList";
 import TelemetryInspector from "./TelemetryInspector";
 
@@ -50,12 +51,51 @@ export default function CommandCenter({ onViewInsights }) {
   const fileRef = useRef(null);
   const abortControllerRef = useRef(null);
   const inputRef = useRef(null);
+  const loadedConvIdRef = useRef(null);
 
   const { selectedConversation } = useSelector((state) => state.conversation);
   const { messages, isLoading, isStopping, currentExecutionId } = useSelector(
     (state) => state.message
   );
   const dispatch = useDispatch();
+
+  // Load chat history messages whenever a conversation is selected or opened
+  useEffect(() => {
+    const fetchConversationMessages = async () => {
+      if (!selectedConversation?._id) {
+        loadedConvIdRef.current = null;
+        return;
+      }
+
+      if (loadedConvIdRef.current === selectedConversation._id) {
+        return;
+      }
+
+      if (isLoading && messages.length > 0) {
+        loadedConvIdRef.current = selectedConversation._id;
+        return;
+      }
+
+      if (selectedConversation.title === "New Chat" && messages.length > 0) {
+        loadedConvIdRef.current = selectedConversation._id;
+        return;
+      }
+
+      try {
+        loadedConvIdRef.current = selectedConversation._id;
+        const data = await getMessages(selectedConversation._id);
+        dispatch(setMessages(data || []));
+        const latestArtifactMessage = [...(data || [])]
+          .reverse()
+          .find((msg) => msg.artifacts && msg.artifacts.length > 0);
+        dispatch(setArtifacts(latestArtifactMessage?.artifacts || []));
+      } catch (err) {
+        console.error("[fetchConversationMessages Error]", err);
+      }
+    };
+
+    fetchConversationMessages();
+  }, [selectedConversation?._id]);
 
   // Voice recognition support
   useEffect(() => {

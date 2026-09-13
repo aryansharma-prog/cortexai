@@ -116,12 +116,22 @@ export const executeLeafTask = async (taskNode, state, executionId, sharedMemory
   });
 
   // Pull scoped prerequisite context from SharedMemory
-  const dependencyContext = sharedMemory.getDependencyContext(taskNode.dependencies || []);
+  const memoryContextResult = sharedMemory.getRelevantContext({
+    taskId: subtaskId,
+    agentType,
+    dependencies: taskNode.dependencies || [],
+    description: taskNode.description || state.prompt,
+    lastSeenVersion: taskNode.lastSeenVersion || 0
+  });
+
+  const dependencyContext = memoryContextResult.formattedContext;
+  const memoryTelemetry = memoryContextResult.telemetry;
 
   const subtaskContext = {
     ...taskNode,
     context: dependencyContext,
     description: taskNode.description || state.prompt,
+    memoryTelemetry,
     executionId
   };
 
@@ -356,6 +366,7 @@ export const executeLeafTask = async (taskNode, state, executionId, sharedMemory
     sharedMemory.recordTaskOutput(subtaskId, result?.output || "", {
       name: agentInfo.name,
       agentId: agentType,
+      dependencies: taskNode.dependencies || [],
       metrics: finalMetrics,
       trust: trustResult
     });
@@ -367,7 +378,8 @@ export const executeLeafTask = async (taskNode, state, executionId, sharedMemory
       agentName: agentInfo.name,
       status: "completed",
       metrics: finalMetrics,
-      trust: trustResult
+      trust: trustResult,
+      memory: memoryTelemetry
     });
 
     return {
@@ -381,7 +393,8 @@ export const executeLeafTask = async (taskNode, state, executionId, sharedMemory
       artifacts: result?.artifacts || [],
       searchResults: result?.searchResults || null,
       metrics: finalMetrics,
-      trust: trustResult
+      trust: trustResult,
+      memory: memoryTelemetry
     };
   } catch (err) {
     if (err instanceof ResearchCancelledError || err.name === "ResearchCancelledError") {
@@ -577,7 +590,8 @@ export const runAdaptiveOrchestration = async (state) => {
             metrics: res.metrics,
             trustScore: res.trust?.trustScore,
             trustClassification: res.trust?.trustClassification,
-            trustDetails: res.trust?.details
+            trustDetails: res.trust?.details,
+            memory: res.memory
           });
 
           if (res.metrics) executedAgentMetrics.push(res.metrics);
@@ -696,10 +710,13 @@ export const runAdaptiveOrchestration = async (state) => {
 
     const totalDurationMs = Date.now() - startTime;
     const treeSummary = tree.getMetricsSummary();
+    const sharedMemorySummary = sharedMemory.getTelemetrySummary();
+
     const metricsSummary = {
       ...aggregateWorkflowMetrics(executedAgentMetrics),
       ...treeSummary,
       responsePolicy,
+      sharedMemorySummary,
       totalDurationMs
     };
 
@@ -710,6 +727,7 @@ export const runAdaptiveOrchestration = async (state) => {
       executionStrategy,
       scores,
       responsePolicy,
+      sharedMemorySummary,
       selectedAgents,
       totalTasks: treeSummary.totalTasks,
       leafTasks: treeSummary.leafTasks,
@@ -733,7 +751,8 @@ export const runAdaptiveOrchestration = async (state) => {
         metrics: node.metrics,
         trustScore: node.trustScore,
         trustClassification: node.trustClassification,
-        escalated: node.escalated
+        escalated: node.escalated,
+        memory: node.memory
       }))
     };
 
@@ -742,6 +761,7 @@ export const runAdaptiveOrchestration = async (state) => {
       workflowStatus: "completed",
       metrics: metricsSummary,
       responsePolicy,
+      sharedMemorySummary,
       executionTree: workflowResponse.executionTree,
       totalDurationMs
     });
@@ -755,6 +775,7 @@ export const runAdaptiveOrchestration = async (state) => {
       taskType,
       complexity,
       responsePolicy,
+      sharedMemorySummary,
       executionStrategy,
       scores,
       selectedAgents,
@@ -785,6 +806,7 @@ export const runAdaptiveOrchestration = async (state) => {
       searchResults: accumulatedSearchResults,
       taskAnalysis,
       responsePolicy,
+      sharedMemorySummary,
       workflow: workflowResponse,
       executionTree: workflowResponse.executionTree,
       metrics: metricsSummary

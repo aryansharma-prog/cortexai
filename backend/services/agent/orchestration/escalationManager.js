@@ -88,11 +88,12 @@ export const handleTaskEscalation = async (leafNode, executeFn, state, sharedMem
     leafNode.trustClassification = newTrust.trustClassification;
     leafNode.trustDetails = newTrust.details;
 
-    // Update shared memory
+    // Update shared memory with verified escalated result
     sharedMemory.recordTaskOutput(leafNode.id, rerunResult.output, {
       name: leafNode.name,
       agentId: strongerAgent.id,
-      escalated: true
+      escalated: true,
+      trust: newTrust
     });
 
     console.log(`[ESCALATION] Task="${leafNode.name}" Rerun complete. New Trust=${newTrust.trustScore} (${newTrust.trustClassification})`);

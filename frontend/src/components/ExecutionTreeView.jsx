@@ -234,6 +234,19 @@ const TreeNodeItem = ({ node, isRoot = false }) => {
             )}
           </div>
         )}
+
+        {/* Incremental Memory Telemetry Chip */}
+        {node.memory && (node.memory.entriesUsed > 0 || node.memory.entriesSkipped > 0) && (
+          <div className="flex items-center gap-2 mt-2 pt-1.5 border-t border-white/[0.04] text-[10px] font-mono text-slate-400 flex-wrap">
+            <span className="text-teal-400 font-semibold">Shared Memory:</span>
+            <span>Used: <strong className="text-slate-200">{node.memory.entriesUsed}</strong></span>
+            <span>Skipped: <strong className="text-slate-400">{node.memory.entriesSkipped}</strong></span>
+            <span>Context: <strong className="text-indigo-300">{node.memory.selectedContextTokens}t</strong></span>
+            {node.memory.tokensSavedEstimate > 0 && (
+              <span className="text-emerald-400">Saved: <strong>~{node.memory.tokensSavedEstimate}t ({node.memory.contextReductionPercent}%)</strong></span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Render Child Subtasks Recursively */}
@@ -251,6 +264,7 @@ const TreeNodeItem = ({ node, isRoot = false }) => {
 export default function ExecutionTreeView({ executionTree = null, workflow = {} }) {
   const tree = executionTree || workflow?.executionTree;
   const policy = workflow?.responsePolicy || workflow?.metrics?.responsePolicy || null;
+  const memorySummary = workflow?.sharedMemorySummary || workflow?.metrics?.sharedMemorySummary || null;
 
   if (!tree) {
     return (
@@ -291,6 +305,34 @@ export default function ExecutionTreeView({ executionTree = null, workflow = {} 
           <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
             <span>Sections: <strong className={policy.allowSections ? "text-emerald-400" : "text-slate-500"}>{policy.allowSections ? "YES" : "NO"}</strong></span>
             <span>Tables: <strong className={policy.allowTables ? "text-emerald-400" : "text-slate-500"}>{policy.allowTables ? "YES" : "NO"}</strong></span>
+          </div>
+        </div>
+      )}
+
+      {/* Shared Incremental Memory Bar */}
+      {memorySummary && memorySummary.entriesCreated > 0 && (
+        <div className="mb-3 px-3 py-2 rounded-lg bg-teal-950/20 border border-teal-500/20 text-xs flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center justify-center w-5 h-5 rounded bg-teal-500/20 text-teal-400 font-mono text-[10px] font-bold">
+              SIM
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-slate-200 text-[11px]">Shared Incremental Memory (v{memorySummary.memoryVersion})</span>
+                <span className="text-[10px] font-mono text-teal-300 bg-teal-500/15 px-1.5 py-0.2 rounded border border-teal-500/20">
+                  {memorySummary.contextReductionPercent}% Context Reduced
+                </span>
+              </div>
+              <div className="text-[10px] text-slate-400 mt-0.5 font-mono">
+                Entries: {memorySummary.entriesCreated} created ({memorySummary.entriesUsed} delivered, {memorySummary.entriesSkipped} filtered)
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
+            {memorySummary.tokensSavedEstimate > 0 && (
+              <span className="text-emerald-400">Tokens Saved: <strong>~{memorySummary.tokensSavedEstimate}t</strong></span>
+            )}
           </div>
         </div>
       )}

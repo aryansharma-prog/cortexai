@@ -210,11 +210,26 @@ $w_{\text{cap}} = 0.35, \quad w_{\text{qual}} = 0.25, \quad w_{\text{suit}} = 0.
 
 ### 🧠 Algorithm 5: Shared Incremental Working Memory
 * **File:** [`backend/services/agent/orchestration/sharedMemory.js`](file:///c:/Users/ASUS/Desktop/cortex-ai/cortexai/backend/services/agent/orchestration/sharedMemory.js)
-* **Goal:** Scoped context delivery preventing prompt explosion.
+* **Goal:** Scoped, versioned, delta-based context delivery preventing token explosion and redundant reasoning across multi-agent DAGs.
 
-- Manages a versioned map of completed task outputs.
-- When an agent executes, `getDependencyContext(dependencies)` retrieves **only** direct prerequisite findings and newly generated facts.
-- Prevents duplicating the entire conversation history into every microservice LLM prompt.
+#### Core Capabilities & Memory Architecture
+1. **Structured Memory Entries**:
+   - Categorized by type: `FACT`, `DATA`, `CODE`, `RESULT`, `SOURCE`, `CONSTRAINT`, `REQUIREMENT`, `VERIFICATION`, `CONFLICT`, `SUMMARY`.
+   - Tracked with monotonic `version`, `importance` ($0.0 - 1.0$), `confidence`, `status` (`ACTIVE`, `VERIFIED`, `SUPERSEDED`, `INVALID`), and `producer`/`consumers` mapping.
+2. **Monotonic Versioning & Delta Retrieval**:
+   - `getNewSince(sinceVersion)` retrieves exclusively new and modified delta entries since the agent's last checkpoint.
+3. **Relevance Filtering & Dependency Scoping**:
+   - Downstream agents receive strictly the verified facts, quantitative parameters, and code snippets relevant to their immediate task dependencies.
+   - Irrelevant peer findings and conversational fluff are filtered out before prompt construction.
+4. **Cost-Aware Knowledge Extraction**:
+   - Deterministic extraction of code blocks, Markdown tables, metric lines, and sources from agent outputs without invoking expensive intermediate LLMs.
+5. **Trust & Escalation Superseding**:
+   - Escalated executions mark superseded entries as `status: "SUPERSEDED"`, ensuring downstream agents only consume verified, high-trust findings.
+6. **Token Reduction Telemetry**:
+   $$\text{Tokens Saved} = \text{FullContextTokensEstimate} - \text{SelectedContextTokens}$$
+   $$\text{Context Reduction \%} = \left( 1 - \frac{\text{SelectedContextTokens}}{\text{FullContextTokensEstimate}} \right) \times 100\%$$
+7. **Fail-Safe Persistence**:
+   - Fast Redis caching (`shared_memory:<executionId>`) with zero-downtime in-memory fallback if Redis is unavailable.
 
 ---
 

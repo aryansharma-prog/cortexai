@@ -34,7 +34,8 @@ const subtaskSchema = new mongoose.Schema({
   trustScore: { type: Number },
   trustClassification: { type: String },
   escalated: { type: Boolean, default: false },
-  metrics: { type: mongoose.Schema.Types.Mixed, default: null }
+  metrics: { type: mongoose.Schema.Types.Mixed, default: null },
+  memory: { type: mongoose.Schema.Types.Mixed, default: null }
 }, { _id: false });
 
 const responsePolicySchema = new mongoose.Schema({
@@ -83,6 +84,7 @@ const executionSchema = new mongoose.Schema({
     default: "low"
   },
   responsePolicy: { type: responsePolicySchema, default: null },
+  sharedMemorySummary: { type: mongoose.Schema.Types.Mixed, default: null },
   executionStrategy: {
     type: String,
     default: "single"

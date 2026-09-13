@@ -30,7 +30,8 @@ export class ExecutionTreeNode {
     children = [],
     isLeaf = true,
     escalated = false,
-    activitySummary = ""
+    activitySummary = "",
+    memory = null
   }) {
     this.id = id || `node_${Math.random().toString(36).substring(2, 8)}`;
     this.parentId = parentId;
@@ -57,6 +58,7 @@ export class ExecutionTreeNode {
     this.isLeaf = isLeaf;
     this.escalated = escalated;
     this.activitySummary = activitySummary;
+    this.memory = memory;
     this.createdAt = new Date().toISOString();
     this.updatedAt = new Date().toISOString();
   }
@@ -97,6 +99,7 @@ export class ExecutionTreeNode {
       trustScore: this.trustScore,
       trustClassification: this.trustClassification,
       trustDetails: this.trustDetails,
+      memory: this.memory,
       children: this.children.map(c => (c instanceof ExecutionTreeNode ? c.toJSON() : c)),
       isLeaf: this.isLeaf,
       escalated: this.escalated,
@@ -186,6 +189,8 @@ export class ExecutionTree {
     let estimatedCost = 0;
     let trustSum = 0;
     let trustCount = 0;
+    let totalContextTokensSaved = 0;
+    let totalContextTokensSelected = 0;
     const agentsUsedSet = new Set();
 
     leafNodes.forEach(leaf => {
@@ -198,6 +203,10 @@ export class ExecutionTree {
       if (leaf.trustScore !== null && leaf.trustScore !== undefined) {
         trustSum += leaf.trustScore;
         trustCount += 1;
+      }
+      if (leaf.memory) {
+        if (leaf.memory.tokensSavedEstimate) totalContextTokensSaved += leaf.memory.tokensSavedEstimate;
+        if (leaf.memory.selectedContextTokens) totalContextTokensSelected += leaf.memory.selectedContextTokens;
       }
     });
 
@@ -215,7 +224,9 @@ export class ExecutionTree {
       totalDurationMs,
       estimatedCost: Number(estimatedCost.toFixed(6)),
       actualCost: Number(estimatedCost.toFixed(6)),
-      averageTrust
+      averageTrust,
+      totalContextTokensSaved,
+      totalContextTokensSelected
     };
   }
 

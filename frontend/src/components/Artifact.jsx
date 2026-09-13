@@ -91,100 +91,95 @@ function Artifact() {
   const PanelContent = ({onClose}) => {
     return (
       <>
-        {!collapsed ? <div className='flex flex-col h-full bg-[#0d0f14]'>
+        {!collapsed ? <div className='flex flex-col h-full bg-white'>
 
-          <div className='h-14 px-4 border-b border-white/[0.06] flex items-center gap-3 shrink-0'>
-            <button className='flex items-center justify-center w-7 h-7 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.05] transition-colors duration-150 bg-transparent border-none cursor-pointer shrink-0' onClick={onClose ?? (() => setCollapsed(true))}>
+          <div className='h-14 px-4 border-b border-stone-200 bg-stone-50/50 flex items-center gap-3 shrink-0'>
+            <button className='flex items-center justify-center w-7 h-7 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors duration-150 bg-transparent border-none cursor-pointer shrink-0' onClick={onClose ?? (() => setCollapsed(true))}>
               {onClose?<X size={15}/>:<PanelRightClose size={16} />}
             </button>
             <div className='flex items-center gap-2 flex-1 min-w-0'>
-              <div className='flex items-center justify-center w-6 h-6 rounded-md bg-indigo-500/10 border border-indigo-500/20 shrink-0'>
-                <Code2 className="text-indigo-400" size={12} />
+              <div className='flex items-center justify-center w-6 h-6 rounded-md bg-orange-50 border border-orange-200/80 shrink-0'>
+                <Code2 className="text-orange-600" size={12} />
               </div>
-              <div className='text-[13px] font-medium text-slate-200 truncate'>{artifacts[0]?.title}</div>
+              <div className='text-[13px] font-bold text-stone-900 truncate'>{artifacts[0]?.title}</div>
             </div>
 
             <div className='flex items-center gap-1 shrink-0'>
               <button
                 onClick={handleCopy}
-                className='flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] rounded-lg transition-colors duration-150 bg-transparent border-none cursor-pointer'
+                className='flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-stone-500 hover:text-stone-800 hover:bg-stone-100 rounded-lg transition-colors duration-150 bg-transparent border-none cursor-pointer'
               >
-                {copied ? <Check size={15} /> : <Copy size={15} />}
+                {copied ? <Check size={15} className="text-emerald-600" /> : <Copy size={15} />}
               </button>
             </div>
             {canPreview &&
-              <div className='flex items-center gap-1 bg-white/[0.04] border border-white/[0.06] p-1 rounded-lg'>
+              <div className='flex items-center gap-1 bg-stone-100 border border-stone-200 p-1 rounded-lg'>
                 <button
                   onClick={() => setTab("code")}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors duration-150
-                  ${tab === "code" ? "bg-indigo-500 text-white" : "text-slate-500 hover:text-slate-200"}`}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all duration-150 cursor-pointer border-none
+                  ${tab === "code" ? "bg-orange-600 text-white shadow-2xs" : "bg-transparent text-stone-500 hover:text-stone-800"}`}
                 >
                   <Code2 size={11} /> Code
                 </button>
                 <button
                   onClick={() => setTab("preview")}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors duration-150
-                  ${tab === "preview" ? "bg-indigo-500 text-white" : "text-slate-500 hover:text-slate-200"}`}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all duration-150 cursor-pointer border-none
+                  ${tab === "preview" ? "bg-orange-600 text-white shadow-2xs" : "bg-transparent text-stone-500 hover:text-stone-800"}`}
                 >
                   <Eye size={11} /> Preview
                 </button>
               </div>}
 
           </div>
-          {tab === "code" && <div className='flex h-auto border-b border-white/[0.06] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden shrink-0'>
+          {tab === "code" && <div className='flex h-auto border-b border-stone-200 bg-stone-50/40 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden shrink-0'>
             {
               artifacts[0]?.files?.map((f, index) => (
                 <button
+                  key={index}
                   onClick={() => setActiveFile(index)}
-                  className={`px-4 py-2.5 text-[11px] font-medium whitespace-nowrap transition-colors duration-150 border-r border-white/[0.05] relative cursor-pointer bg-transparent   ${activeFile === index ? "text-indigo-400" : "text-slate-500 hover:text-slate-300"}`}
+                  className={`px-4 py-2.5 text-[11px] font-mono font-medium whitespace-nowrap transition-colors duration-150 border-r border-stone-200/70 relative cursor-pointer bg-transparent ${activeFile === index ? "text-orange-600 font-bold bg-white" : "text-stone-500 hover:text-stone-800"}`}
                 >
                   {f?.name}
-                  {activeFile === index && <div className='absolute bottom-0 left-0 right-0 h-[2px] bg-indigo-500 rounded-t-full' />}
-
+                  {activeFile === index && <div className='absolute bottom-0 left-0 right-0 h-[2px] bg-orange-600 rounded-t-full' />}
                 </button>
               ))
             }
           </div>}
 
-
-          <div className='flex-1 overflow-hidden'>
+          <div className='flex-1 overflow-hidden bg-white'>
             {(tab == "preview" && canPreview) ? <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.3 }}
               className='w-full h-full'
             >
-              <iframe title='preview' srcDoc={previewDoc} sandbox='allow-scripts' className='w-full h-full bg-white' />
+              <iframe title='preview' srcDoc={previewDoc} sandbox='allow-scripts' className='w-full h-full bg-white border-none' />
             </motion.div>
               :
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
+                transition={{ duration: 0.3 }}
                 className='w-full h-full'
               >
                 <Editor
-                  theme='vs-dark'
+                  theme='vs'
                   language={detectLanguage(file?.name)}
                   value={file?.content}
                   options={{ readOnly: true, minimap: { enabled: false }, fontSize: 13, wordWrap: "on", automaticLayout: true, scrollBeyondLastLine: false, padding: { top: 16 }, lineNumbers: "on", renderLineHighlight: "none" }}
-
                 />
-
               </motion.div>
             }
-
           </div>
 
-
         </div> :
-          <div className='hidden lg:flex h-full border-l border-white/[0.06] bg-[#0d0f14] flex-col items-center py-4 gap-3 shrink-0'>
-            <button className='flex items-center justify-center w-7 h-7 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.05] transition-colors duration-150 bg-transparent border-none cursor-pointer shrink-0' onClick={() => setCollapsed(false)}>
+          <div className='hidden lg:flex h-full border-l border-stone-200 bg-stone-50 flex-col items-center py-4 gap-3 shrink-0'>
+            <button className='flex items-center justify-center w-7 h-7 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors duration-150 bg-transparent border-none cursor-pointer shrink-0' onClick={() => setCollapsed(false)}>
               <PanelRightOpen size={16} />
             </button>
             <div className='flex items-center gap-2 flex-1 min-w-0'>
               <div
-                className='text-[10px] font-medium text-slate-600 tracking-widest uppercase whitespace-nowrap'
+                className='text-[10px] font-mono font-semibold text-stone-500 tracking-widest uppercase whitespace-nowrap'
                 style={{
                   writingMode: "vertical-lr",
                   transform: "rotate(180deg)"
@@ -196,34 +191,25 @@ function Artifact() {
     )
   }
 
-
-
-
-
   return (
     <>
-
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed bottom-20 sm:bottom-24 right-3 sm:right-4 z-40 flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[11.5px] sm:text-[12px] font-medium shadow-lg shadow-indigo-500/20 border-none cursor-pointer transition-colors duration-150"
-
+        className="lg:hidden fixed bottom-20 sm:bottom-24 right-3 sm:right-4 z-40 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-[11.5px] sm:text-[12px] font-semibold shadow-lg shadow-orange-600/20 border-none cursor-pointer transition-colors duration-150"
       >
         <Code2 size={13} />
         View Code
       </button>
       <AnimatePresence>
         {mobileOpen && <>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onClick={() => setMobileOpen(false)} className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onClick={() => setMobileOpen(false)} className="lg:hidden fixed inset-0 z-50 bg-stone-950/40 backdrop-blur-xs" />
 
-          <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ duration: 0.25, ease: "easeInOut" }} className="lg:hidden fixed inset-y-0 right-0 z-50 w-[92vw] sm:w-[88vw] max-w-[420px] border-l border-white/[0.06] overflow-hidden">
+          <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ duration: 0.25, ease: "easeInOut" }} className="lg:hidden fixed inset-y-0 right-0 z-50 w-[92vw] sm:w-[88vw] max-w-[420px] border-l border-stone-200 overflow-hidden bg-white shadow-2xl">
             <PanelContent onClose={()=>setMobileOpen(false)}/>
           </motion.div>
-
         </>
         }
-
       </AnimatePresence>
-
 
       <motion.div
         initial={{ width: 400 }}
@@ -232,8 +218,7 @@ function Artifact() {
           duration: 0.25,
           ease: easeInOut
         }}
-        className='hidden lg:flex h-full border-l border-white/[0.06] flex-col overflow-hidden shrink-0 '>
-
+        className='hidden lg:flex h-full border-l border-stone-200 flex-col overflow-hidden shrink-0 bg-white'>
         <PanelContent />
       </motion.div>
     </>

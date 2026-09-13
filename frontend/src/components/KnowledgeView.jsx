@@ -44,18 +44,18 @@ export default function KnowledgeView() {
   ];
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 max-w-5xl mx-auto w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 max-w-5xl mx-auto w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden bg-[#faf8f5]">
       {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-4 pb-6 border-b border-white/[0.06]">
+      <div className="flex items-start justify-between flex-wrap gap-4 pb-6 border-b border-stone-200">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[11px] font-mono mb-2">
-            <FileCode size={11} />
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-50 border border-orange-200/80 text-orange-700 text-[11px] font-mono mb-2 font-medium">
+            <FileCode size={11} className="text-orange-600" />
             <span>Artifacts & Document Repository</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-slate-100 tracking-tight">
-            KNOWLEDGE & ARTIFACTS
+          <h1 className="text-xl sm:text-2xl font-bold text-stone-900 tracking-tight">
+            Knowledge & Artifacts
           </h1>
-          <p className="text-xs sm:text-[13px] text-slate-400 mt-1 leading-relaxed">
+          <p className="text-xs sm:text-[13px] text-stone-600 mt-1 leading-relaxed">
             Review and download generated executive reports, code artifacts, slide decks, and data sheets.
           </p>
         </div>
@@ -63,31 +63,31 @@ export default function KnowledgeView() {
 
       {/* Artifacts List */}
       <div className="my-6 space-y-3">
-        <div className="text-xs font-mono uppercase tracking-wider text-slate-400 px-1">
+        <div className="text-xs font-mono uppercase tracking-wider text-stone-500 font-semibold px-1">
           Generated Documents & Code
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {sampleItems.map((item) => (
             <div
               key={item.id}
-              className="p-4 rounded-xl border border-white/[0.08] bg-[#0c0e14] hover:border-white/[0.14] hover:bg-white/[0.02] transition-all flex flex-col justify-between gap-4"
+              className="p-5 rounded-2xl border border-stone-200 bg-white shadow-2xs hover:border-orange-300 hover:shadow-xs transition-all flex flex-col justify-between gap-4"
             >
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-orange-50 text-orange-700 border border-orange-200">
                     {item.type}
                   </span>
-                  <span className="text-[10px] font-mono text-slate-500">{item.size}</span>
+                  <span className="text-[10px] font-mono text-stone-500 font-medium">{item.size}</span>
                 </div>
-                <div className="text-xs font-semibold text-slate-200 line-clamp-2">
+                <div className="text-xs font-bold text-stone-900 line-clamp-2 leading-snug">
                   {item.title}
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-white/[0.05] text-[11px] text-slate-400 font-mono">
-                <span>{item.filename}</span>
-                <span className="text-blue-400 font-medium">Ready</span>
+              <div className="flex items-center justify-between pt-3 border-t border-stone-100 text-[11px] text-stone-500 font-mono">
+                <span className="truncate max-w-[150px]">{item.filename}</span>
+                <span className="text-orange-600 font-bold">Ready</span>
               </div>
             </div>
           ))}

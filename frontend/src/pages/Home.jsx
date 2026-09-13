@@ -99,7 +99,7 @@ function Home() {
   };
 
   return (
-    <div className="h-screen h-[100dvh] flex bg-[#090a0f] text-slate-100 overflow-hidden font-sans">
+    <div className="h-screen h-[100dvh] flex bg-[#faf8f5] text-slate-900 overflow-hidden font-sans">
       {/* Minimal Navigation Sidebar */}
       <NavigationSidebar
         activeTab={activeTab}
@@ -108,7 +108,7 @@ function Home() {
       />
 
       {/* Main View Area */}
-      <main className="flex-1 flex flex-col min-w-0 bg-[#090a0f] overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 bg-[#faf8f5] overflow-hidden">
         {activeTab === "command" && (
           <CommandCenter onViewInsights={() => setActiveTab("insights")} />
         )}
@@ -131,17 +131,17 @@ function Home() {
 
       {/* Authentication Modal if not logged in */}
       {!userData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#06070a]/80 backdrop-blur-md p-4">
-          <div className="w-full max-w-[400px] bg-[#0d1117] border border-white/[0.09] rounded-2xl p-6 sm:p-8 flex flex-col gap-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4">
+          <div className="w-full max-w-[400px] bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 flex flex-col gap-6 shadow-2xl">
             {/* Header */}
             <div className="flex flex-col gap-2 text-center">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-sm mx-auto shadow-lg shadow-blue-500/30">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-orange-600 to-amber-500 flex items-center justify-center text-white font-bold text-sm mx-auto shadow-lg shadow-orange-500/30">
                 C
               </div>
-              <h2 className="text-xl font-bold text-slate-100 tracking-tight mt-1">
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight mt-1">
                 CortexAI Infrastructure
               </h2>
-              <p className="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto">
+              <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
                 Provider-independent adaptive AI platform. Autonomous routing across models with zero disruption and minimal token spend.
               </p>
             </div>

@@ -34,7 +34,6 @@ import { createConversation } from "../features/createConversation";
 import { addConversation, setConvTitle, setSelectedConversation } from "../redux/conversationSlice";
 import { updateConversation } from "../features/updateConversation";
 import sendMessage, { cancelExecutionRequest } from "../features/sendMessage";
-import getMessages from "../features/getMessages";
 import MessageList from "./MessageList";
 import Nav from "./Nav";
 import TokenEfficiencyWidget from "./TokenEfficiencyWidget";
@@ -45,7 +44,7 @@ export default function CommandCenter({ onViewInsights }) {
   const [prompt, setPrompt] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [listening, setListening] = useState(false);
-  const [isInspectorOpen, setIsInspectorOpen] = useState(true);
+  const [isInspectorOpen, setIsInspectorOpen] = useState(false);
   const [selectedModelRoute, setSelectedModelRoute] = useState("Auto-Route (Best Speed & Cost)");
   const [showModelDropdown, setShowModelDropdown] = useState(false);
 
@@ -53,45 +52,12 @@ export default function CommandCenter({ onViewInsights }) {
   const fileRef = useRef(null);
   const abortControllerRef = useRef(null);
   const inputRef = useRef(null);
-  const loadedConvIdRef = useRef(null);
 
   const { selectedConversation } = useSelector((state) => state.conversation);
   const { messages, isLoading, isStopping, currentExecutionId } = useSelector(
     (state) => state.message
   );
   const dispatch = useDispatch();
-
-  // Load chat history & artifacts seamlessly when switching conversations
-  useEffect(() => {
-    const loadConversationMessages = async () => {
-      const convId = selectedConversation?._id;
-      if (!convId) {
-        loadedConvIdRef.current = null;
-        return;
-      }
-
-      if (loadedConvIdRef.current === convId) return;
-      loadedConvIdRef.current = convId;
-
-      try {
-        const fetchedMessages = await getMessages(convId);
-        if (Array.isArray(fetchedMessages)) {
-          dispatch(setMessages(fetchedMessages));
-          const allArtifacts = [];
-          fetchedMessages.forEach((msg) => {
-            if (Array.isArray(msg.artifacts) && msg.artifacts.length > 0) {
-              allArtifacts.push(...msg.artifacts);
-            }
-          });
-          dispatch(setArtifacts(allArtifacts));
-        }
-      } catch (err) {
-        console.error("[CommandCenter] Error loading conversation messages:", err);
-      }
-    };
-
-    loadConversationMessages();
-  }, [selectedConversation?._id, dispatch]);
 
   // Voice recognition support
   useEffect(() => {
@@ -183,7 +149,6 @@ export default function CommandCenter({ onViewInsights }) {
       const conv = await createConversation();
       if (conv && conv._id) {
         conversation = conv;
-        loadedConvIdRef.current = conv._id;
         dispatch(addConversation(conv));
         dispatch(setSelectedConversation(conv));
       }
@@ -254,7 +219,7 @@ export default function CommandCenter({ onViewInsights }) {
   const hasMessages = messages && messages.length > 0;
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-[#0a0d14] text-[#e1e2ec] overflow-hidden h-screen">
+    <div className="flex-1 flex flex-col min-w-0 bg-[#faf8f5] text-slate-900 overflow-hidden h-screen">
       {/* Top Nav Bar */}
       <Nav
         onToggleInspector={() => setIsInspectorOpen(!isInspectorOpen)}
@@ -270,34 +235,34 @@ export default function CommandCenter({ onViewInsights }) {
         <div className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
           {!hasMessages ? (
             /* Empty State: Command Center Dashboard */
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 sm:px-8 py-8 max-w-4xl mx-auto w-full flex flex-col items-center justify-center gap-6 radial-bg pb-32">
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 sm:px-8 py-8 max-w-5xl mx-auto w-full flex flex-col items-center justify-center gap-6 radial-bg pb-32">
               {/* Hero Header */}
               <div className="text-center space-y-2 max-w-xl">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#00d2ff]/10 border border-[#00d2ff]/30 text-[#00d2ff] text-[11px] font-mono tracking-wider uppercase">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 border border-orange-200 text-orange-600 text-[11px] font-mono font-semibold tracking-wider uppercase shadow-2xs">
                   <Terminal size={12} />
                   <span>CORTEX COMMAND CENTER</span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-semibold text-[#e1e2ec] tracking-tight">
+                <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
                   What do you want CortexAI to solve?
                 </h1>
-                <p className="text-xs sm:text-[13px] text-[#859399] leading-relaxed">
+                <p className="text-xs sm:text-[13px] text-slate-500 leading-relaxed">
                   Autonomous Multi-Model Routing: Claude 3.7 + DeepSeek V3 + Groq Llama with zero disruption and minimal token spend.
                 </p>
               </div>
 
               {/* Sample Suggested Prompts */}
-              <div className="w-full max-w-2xl space-y-2">
-                <div className="text-[10px] font-mono uppercase tracking-wider text-[#859399] text-center">
+              <div className="w-full max-w-3xl space-y-2">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 text-center font-medium">
                   Suggested Missions
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {samplePrompts.map((p, i) => (
                     <button
                       key={i}
                       onClick={() => handleRunTask(p)}
-                      className="p-3 text-left rounded-xl border border-[#3c494e]/40 bg-[#191b23]/50 hover:bg-[#272a32]/80 hover:border-[#00d2ff]/40 text-xs text-[#e1e2ec]/90 transition-all cursor-pointer leading-snug shadow-sm group"
+                      className="p-3.5 text-left rounded-xl border border-stone-200 bg-white hover:bg-orange-50/40 hover:border-orange-300 text-xs text-slate-800 transition-all cursor-pointer leading-snug shadow-2xs group"
                     >
-                      <span className="group-hover:text-[#00d2ff] transition-colors">{p}</span>
+                      <span className="group-hover:text-orange-600 transition-colors font-medium">{p}</span>
                     </button>
                   ))}
                 </div>
@@ -307,7 +272,7 @@ export default function CommandCenter({ onViewInsights }) {
               <TokenEfficiencyWidget onViewInsights={onViewInsights} />
 
               {/* Continuity Section */}
-              <div className="w-full max-w-2xl">
+              <div className="w-full max-w-3xl">
                 <CortexContinuitySection />
               </div>
             </div>
@@ -316,27 +281,27 @@ export default function CommandCenter({ onViewInsights }) {
             <MessageList />
           )}
 
-          {/* ==================== BOTTOM FLOATING GLASS COMMAND DOCK ==================== */}
-          <div className="absolute bottom-4 left-4 right-4 sm:left-6 sm:right-6 max-w-4xl mx-auto z-20">
-            <div className="bg-[#10131a]/90 backdrop-blur-xl border border-[#3c494e]/60 rounded-xl p-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] space-y-2">
+          {/* ==================== BOTTOM FLOATING COMMAND DOCK (WHITE & SAFFRON ACCENT) ==================== */}
+          <div className="absolute bottom-4 left-4 right-4 sm:left-6 sm:right-6 max-w-5xl mx-auto z-20">
+            <div className="bg-white/95 backdrop-blur-xl border border-stone-200 rounded-xl p-2.5 shadow-[0_12px_36px_rgba(15,23,42,0.08),0_1px_3px_rgba(15,23,42,0.05)] space-y-2">
               {/* Context Attachment Pills */}
               {selectedFile && (
                 <div className="flex items-center gap-2 px-1">
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#32353d] border border-[#3c494e]/60 text-[11px] font-mono text-[#e1e2ec]">
-                    <FileText size={13} className="text-[#00d2ff]" />
-                    <span className="truncate max-w-[200px]">{selectedFile.name}</span>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-stone-50 border border-stone-200 text-[11px] font-mono text-slate-800">
+                    <FileText size={13} className="text-orange-600 font-semibold" />
+                    <span className="truncate max-w-[200px] font-medium">{selectedFile.name}</span>
                     <button
                       onClick={() => {
                         setSelectedFile(null);
                         if (fileRef.current) fileRef.current.value = "";
                       }}
-                      className="hover:text-[#ffb4ab] text-xs ml-1 border-none bg-transparent cursor-pointer text-[#859399]"
+                      className="hover:text-red-500 text-xs ml-1 border-none bg-transparent cursor-pointer text-slate-400"
                       title="Remove attachment"
                     >
                       ✕
                     </button>
                   </div>
-                  <span className="text-[10px] text-[#859399] font-mono">File attached to context</span>
+                  <span className="text-[10px] text-slate-400 font-mono">File attached to context</span>
                 </div>
               )}
 
@@ -361,7 +326,7 @@ export default function CommandCenter({ onViewInsights }) {
                       }
                     }
                   }}
-                  className="w-full bg-[#0b0e15] text-[#e1e2ec] placeholder:text-[#859399] text-xs sm:text-[13px] rounded-lg pl-3 pr-24 py-2.5 border border-[#3c494e]/60 focus:outline-none focus:border-[#00d2ff] focus:ring-1 focus:ring-[#00d2ff] transition-all"
+                  className="w-full bg-stone-50/70 hover:bg-stone-50 text-slate-900 placeholder:text-slate-400 text-xs sm:text-[13px] rounded-lg pl-3 pr-24 py-2.5 border border-stone-200 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all"
                 />
 
                 {/* Embedded Quick Action Buttons */}
@@ -381,7 +346,7 @@ export default function CommandCenter({ onViewInsights }) {
                     className={`p-1.5 rounded-md transition-colors border-none cursor-pointer ${
                       listening
                         ? "bg-rose-500 text-white"
-                        : "text-[#859399] hover:text-[#00d2ff] bg-transparent"
+                        : "text-slate-400 hover:text-orange-600 bg-transparent"
                     }`}
                     title="Voice Input"
                   >
@@ -390,7 +355,7 @@ export default function CommandCenter({ onViewInsights }) {
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}
-                    className="p-1.5 rounded-md text-[#859399] hover:text-[#00d2ff] transition-colors border-none bg-transparent cursor-pointer"
+                    className="p-1.5 rounded-md text-slate-400 hover:text-orange-600 transition-colors border-none bg-transparent cursor-pointer"
                     title="Attach File Context"
                   >
                     <Paperclip size={15} />
@@ -406,17 +371,17 @@ export default function CommandCenter({ onViewInsights }) {
                     <button
                       type="button"
                       onClick={() => setShowModelDropdown(!showModelDropdown)}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#1d1f27] hover:bg-[#272a32] border border-[#3c494e]/50 text-[11px] font-mono text-[#e1e2ec] transition-colors border-none cursor-pointer"
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-stone-50 hover:bg-stone-100 border border-stone-200 text-[11px] font-mono text-slate-700 transition-colors border-none cursor-pointer"
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#00d2ff]" />
-                      <span className="truncate max-w-[170px] sm:max-w-[240px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                      <span className="truncate max-w-[170px] sm:max-w-[240px] font-medium">
                         {selectedModelRoute}
                       </span>
-                      <ChevronDown size={12} className="text-[#859399]" />
+                      <ChevronDown size={12} className="text-slate-400" />
                     </button>
 
                     {showModelDropdown && (
-                      <div className="absolute bottom-full left-0 mb-1 w-64 bg-[#191b23] border border-[#3c494e]/60 rounded-lg shadow-2xl py-1 z-50 text-[11px] font-mono">
+                      <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-stone-200 rounded-lg shadow-xl py-1 z-50 text-[11px] font-mono">
                         {[
                           "Auto-Route (Best Speed & Cost)",
                           "Claude 3.7 Sonnet (Deep Reasoning)",
@@ -429,8 +394,8 @@ export default function CommandCenter({ onViewInsights }) {
                               setSelectedModelRoute(m);
                               setShowModelDropdown(false);
                             }}
-                            className={`w-full text-left px-3 py-1.5 hover:bg-[#272a32] transition-colors border-none cursor-pointer ${
-                              selectedModelRoute === m ? "text-[#00d2ff] font-semibold" : "text-[#e1e2ec]"
+                            className={`w-full text-left px-3 py-1.5 hover:bg-orange-50 transition-colors border-none cursor-pointer ${
+                              selectedModelRoute === m ? "text-orange-600 font-semibold" : "text-slate-700"
                             }`}
                           >
                             {m}
@@ -450,10 +415,10 @@ export default function CommandCenter({ onViewInsights }) {
                         );
                       }
                     }}
-                    className="hidden sm:flex items-center gap-1 px-2 py-1 rounded text-[11px] font-mono text-[#859399] hover:text-[#00d2ff] hover:bg-[#1d1f27] transition-colors border-none bg-transparent cursor-pointer"
+                    className="hidden sm:flex items-center gap-1 px-2 py-1 rounded text-[11px] font-mono text-slate-600 hover:text-orange-600 hover:bg-orange-50/60 transition-colors border-none bg-transparent cursor-pointer font-medium"
                     title="Enhance prompt for optimal agent routing"
                   >
-                    <Wand2 size={12} className="text-[#00d2ff]" />
+                    <Wand2 size={12} className="text-orange-600" />
                     <span>Optimize Prompt</span>
                   </button>
                 </div>
@@ -464,7 +429,7 @@ export default function CommandCenter({ onViewInsights }) {
                     <button
                       onClick={handleStopExecution}
                       disabled={isStopping}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-semibold cursor-pointer transition-all"
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-semibold cursor-pointer transition-all"
                     >
                       {isStopping ? (
                         <>
@@ -484,12 +449,12 @@ export default function CommandCenter({ onViewInsights }) {
                       disabled={!prompt.trim() && !selectedFile}
                       className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all border-none cursor-pointer ${
                         prompt.trim() || selectedFile
-                          ? "bg-[#00d2ff] hover:brightness-110 text-[#003543] shadow-glow-cyan"
-                          : "bg-[#1d1f27] text-[#859399] cursor-not-allowed border border-[#3c494e]/30"
+                          ? "bg-gradient-to-r from-orange-600 to-amber-500 hover:brightness-105 text-white shadow-[0_3px_12px_rgba(234,88,12,0.3)]"
+                          : "bg-stone-100 text-slate-400 cursor-not-allowed border border-stone-200"
                       }`}
                     >
                       <span>Execute Task</span>
-                      <span className="text-[11px] font-mono opacity-80">↵</span>
+                      <span className="text-[11px] font-mono opacity-90">↵</span>
                     </button>
                   )}
                 </div>

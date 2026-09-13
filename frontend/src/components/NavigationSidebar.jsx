@@ -14,10 +14,7 @@ import {
   X,
   ShieldCheck,
   Settings,
-  Sparkles,
-  BookOpen,
-  Share2,
-  Sliders
+  BookOpen
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -83,11 +80,11 @@ export default function NavigationSidebar({
 
   if (collapsed) {
     return (
-      <div className="hidden lg:flex flex-col items-center justify-between w-16 h-screen bg-[#191b23] border-r border-[#3c494e]/40 py-4 shrink-0 z-40">
+      <div className="hidden lg:flex flex-col items-center justify-between w-16 h-screen bg-white border-r border-stone-200 py-4 shrink-0 z-40 shadow-xs">
         <div className="flex flex-col items-center gap-4 w-full">
           <button
             onClick={() => setCollapsed(false)}
-            className="w-9 h-9 rounded-lg flex items-center justify-center text-[#859399] hover:text-[#e1e2ec] hover:bg-white/[0.05] transition-colors border-none bg-transparent cursor-pointer"
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-stone-100 transition-colors border-none bg-transparent cursor-pointer"
             title="Expand Sidebar"
           >
             <PanelRight size={17} />
@@ -95,7 +92,7 @@ export default function NavigationSidebar({
 
           <button
             onClick={handleNewChat}
-            className="w-10 h-10 rounded-lg flex items-center justify-center text-[#003543] bg-[#00d2ff] hover:brightness-110 shadow-glow-cyan-sm transition-all border-none cursor-pointer"
+            className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-r from-orange-600 to-amber-500 hover:brightness-105 shadow-[0_4px_12px_rgba(234,88,12,0.28)] transition-all border-none cursor-pointer"
             title="New Run"
           >
             <Plus size={18} className="font-bold" />
@@ -111,14 +108,14 @@ export default function NavigationSidebar({
                   onClick={() => setActiveTab(item.id)}
                   className={`w-full h-10 rounded-lg flex items-center justify-center transition-colors border-none cursor-pointer relative ${
                     isActive
-                      ? "bg-[#32353d] text-[#00d2ff] border border-[#00d2ff]/30 shadow-sm"
-                      : "text-[#859399] hover:text-[#e1e2ec] hover:bg-white/[0.04] bg-transparent"
+                      ? "bg-orange-50 text-orange-600 border border-orange-200 shadow-xs"
+                      : "text-slate-400 hover:text-slate-800 hover:bg-stone-50 bg-transparent"
                   }`}
                   title={item.label}
                 >
                   <Icon size={17} />
                   {isActive && (
-                    <span className="absolute right-1 w-1.5 h-1.5 rounded-full bg-[#00d2ff] shadow-[0_0_8px_#00d2ff]" />
+                    <span className="absolute right-1 w-1.5 h-1.5 rounded-full bg-orange-600 shadow-[0_0_8px_rgba(234,88,12,0.7)]" />
                   )}
                 </button>
               );
@@ -129,7 +126,7 @@ export default function NavigationSidebar({
         {/* User avatar */}
         <div
           onClick={() => setActiveTab("profile")}
-          className="w-8 h-8 rounded-lg bg-[#32353d] border border-[#00d2ff]/30 flex items-center justify-center text-[#a5e7ff] text-xs font-semibold cursor-pointer"
+          className="w-8 h-8 rounded-lg bg-orange-100 border border-orange-300 flex items-center justify-center text-orange-600 text-xs font-semibold cursor-pointer"
           title="Profile"
         >
           {(userData?.name || "AV").slice(0, 2).toUpperCase()}
@@ -143,7 +140,7 @@ export default function NavigationSidebar({
       {/* Mobile Toggle Button */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-3 left-3.5 z-50 flex items-center justify-center w-8 h-8 rounded-lg bg-[#191b23] border border-[#3c494e]/60 text-[#e1e2ec] cursor-pointer shadow-lg"
+        className="lg:hidden fixed top-3 left-3.5 z-50 flex items-center justify-center w-8 h-8 rounded-lg bg-white border border-stone-200 text-slate-700 cursor-pointer shadow-md"
       >
         <Menu size={16} />
       </button>
@@ -151,39 +148,38 @@ export default function NavigationSidebar({
       {/* Mobile Overlay */}
       {mobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-40 bg-[#0a0d14]/80 backdrop-blur-sm"
+          className="lg:hidden fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-xs"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       {/* Navigation Rail */}
       <aside
-        className={`fixed lg:static top-0 bottom-0 left-0 z-40 flex flex-col justify-between w-60 bg-[#191b23] border-r border-[#3c494e]/40 select-none transition-transform duration-200 h-screen shrink-0 ${
+        className={`fixed lg:static top-0 bottom-0 left-0 z-40 flex flex-col justify-between w-60 bg-white border-r border-stone-200 select-none transition-transform duration-200 h-screen shrink-0 shadow-xs ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         <div>
           {/* Header Logo & Identity */}
-          <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#3c494e]/40">
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-stone-200/80">
             <div className="flex items-center gap-2.5">
-              <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-[#32353d] border border-[#00d2ff]/30 shadow-[0_0_12px_rgba(0,210,255,0.25)]">
-                <Terminal size={16} className="text-[#00d2ff]" />
-                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#00d2ff] animate-ping" />
+              <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-orange-50 border border-orange-200 shadow-[0_2px_10px_rgba(249,115,22,0.18)]">
+                <Terminal size={16} className="text-orange-600" />
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-semibold text-[#a5e7ff] tracking-tight">CortexAI</span>
-                  <span className="px-1.5 py-0.2 rounded bg-[#1d1f27] text-[#00d2ff] border border-[#00d2ff]/30 text-[10px] font-mono">
+                  <span className="text-sm font-semibold text-slate-900 tracking-tight">CortexAI</span>
+                  <span className="px-1.5 py-0.2 rounded bg-orange-50 text-orange-600 border border-orange-200 text-[10px] font-mono font-medium">
                     v2.4
                   </span>
                 </div>
-                <span className="text-[10px] text-[#859399] font-mono">Autonomous Orchestrator</span>
+                <span className="text-[10px] text-slate-400 font-mono">Autonomous Orchestrator</span>
               </div>
             </div>
 
             <button
               onClick={() => setCollapsed(true)}
-              className="hidden lg:flex items-center justify-center w-7 h-7 rounded-md text-[#859399] hover:text-[#e1e2ec] hover:bg-white/[0.04] border-none bg-transparent cursor-pointer"
+              className="hidden lg:flex items-center justify-center w-7 h-7 rounded-md text-slate-400 hover:text-slate-800 hover:bg-stone-100 border-none bg-transparent cursor-pointer"
               title="Collapse Rail"
             >
               <PanelLeft size={15} />
@@ -194,7 +190,7 @@ export default function NavigationSidebar({
           <div className="px-3.5 pt-3.5 pb-2">
             <button
               onClick={handleNewChat}
-              className="w-full flex items-center justify-center gap-2 bg-[#00d2ff] text-[#003543] font-semibold text-xs py-2 rounded-lg shadow-glow-cyan active:scale-[0.98] hover:brightness-110 transition-all border-none cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-600 to-amber-500 text-white font-semibold text-xs py-2 rounded-lg shadow-[0_4px_14px_rgba(234,88,12,0.28)] active:scale-[0.98] hover:brightness-105 transition-all border-none cursor-pointer"
             >
               <Plus size={15} className="font-bold" />
               <span>New Run</span>
@@ -215,25 +211,25 @@ export default function NavigationSidebar({
                   }}
                   className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-mono transition-all border-none cursor-pointer ${
                     isActive
-                      ? "text-[#a5e7ff] bg-[#32353d] border-l-2 border-[#00d2ff] shadow-sm font-semibold"
-                      : "text-[#859399] hover:text-[#e1e2ec] hover:bg-[#272a32] bg-transparent"
+                      ? "text-orange-700 bg-orange-50/80 border-l-2 border-orange-600 font-semibold shadow-2xs"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-stone-50 bg-transparent"
                   }`}
                 >
                   <Icon
                     size={15}
-                    className={isActive ? "text-[#00d2ff]" : "text-[#859399]"}
+                    className={isActive ? "text-orange-600" : "text-slate-400"}
                   />
                   <span>{item.label}</span>
                   {isActive && (
-                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#00d2ff] shadow-[0_0_8px_#00d2ff]" />
+                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-600 shadow-[0_0_8px_rgba(234,88,12,0.7)]" />
                   )}
                   {item.badge && !isActive && (
-                    <span className="ml-auto text-[10px] text-[#00d2ff] font-mono">
+                    <span className="ml-auto text-[10px] text-orange-600 font-semibold font-mono bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200/60">
                       {item.badge}
                     </span>
                   )}
                   {item.count && !isActive && (
-                    <span className="ml-auto text-[10px] text-[#859399] font-mono bg-[#1d1f27] px-1.5 rounded">
+                    <span className="ml-auto text-[10px] text-slate-600 font-mono bg-stone-100 px-1.5 py-0.5 rounded border border-stone-200 font-medium">
                       {item.count}
                     </span>
                   )}
@@ -244,8 +240,8 @@ export default function NavigationSidebar({
 
           {/* Recent Runs Sublist */}
           {conversations && conversations.length > 0 && (
-            <div className="mt-4 px-3 border-t border-[#3c494e]/30 pt-3">
-              <span className="text-[10px] font-mono uppercase text-[#859399] tracking-wider px-1">
+            <div className="mt-4 px-3 border-t border-stone-200 pt-3">
+              <span className="text-[10px] font-mono uppercase text-slate-400 tracking-wider px-1">
                 Recent Threads
               </span>
               <div className="mt-1.5 space-y-0.5 max-h-36 overflow-y-auto custom-scrollbar">
@@ -257,8 +253,8 @@ export default function NavigationSidebar({
                       onClick={() => handleSelectConv(conv)}
                       className={`w-full text-left px-2.5 py-1.5 rounded-md text-[11px] truncate flex items-center gap-2 transition-colors border-none cursor-pointer ${
                         isSel
-                          ? "bg-[#272a32] text-[#00d2ff] font-medium"
-                          : "text-[#859399] hover:text-[#e1e2ec] hover:bg-white/[0.03] bg-transparent"
+                          ? "bg-orange-50 text-orange-700 font-semibold"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-stone-50 bg-transparent"
                       }`}
                     >
                       <MessageSquare size={12} className="shrink-0 opacity-70" />
@@ -272,36 +268,35 @@ export default function NavigationSidebar({
         </div>
 
         {/* Footer Cluster: Online Status & Operator Profile */}
-        <div className="p-3 border-t border-[#3c494e]/40 space-y-2 bg-[#0b0e15]/80">
+        <div className="p-3 border-t border-stone-200 space-y-2 bg-stone-50/50">
           {/* Status Online Pill */}
-          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-[#1d1f27] border border-[#3c494e]/30">
+          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white border border-stone-200 shadow-2xs">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00d2ff] opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00d2ff]" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
               </span>
-              <span className="text-[11px] font-mono text-[#e1e2ec]">System Online</span>
+              <span className="text-[11px] font-mono text-slate-700">System Online</span>
             </div>
-            <span className="text-[10px] font-mono text-[#00d2ff]">99.98%</span>
+            <span className="text-[10px] font-mono font-semibold text-orange-600">99.98%</span>
           </div>
 
           {/* User Operator Profile */}
           <div
             onClick={() => setActiveTab("profile")}
-            className="flex items-center justify-between p-1.5 rounded-md hover:bg-[#272a32] transition-colors cursor-pointer"
+            className="flex items-center justify-between p-1.5 rounded-lg hover:bg-white hover:border hover:border-stone-200 transition-all cursor-pointer"
           >
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-[#32353d] border border-[#00d2ff]/30 flex items-center justify-center text-[#a5e7ff] text-xs font-semibold">
+              <div className="w-7 h-7 rounded-full bg-orange-100 border border-orange-300 flex items-center justify-center text-orange-600 text-xs font-semibold">
                 {(userData?.name || "AV").slice(0, 2).toUpperCase()}
               </div>
               <div className="flex flex-col">
-                <span className="text-xs font-medium text-[#e1e2ec] truncate max-w-[110px]">
+                <span className="text-xs font-semibold text-slate-900 truncate max-w-[110px]">
                   {userData?.name || "Alex V."}
                 </span>
-                <span className="text-[10px] text-[#859399] font-mono">Principal Arch</span>
+                <span className="text-[10px] text-slate-500 font-mono">Principal Arch</span>
               </div>
             </div>
-            <Settings size={14} className="text-[#859399]" />
+            <Settings size={14} className="text-slate-400 hover:text-orange-600 transition-colors" />
           </div>
         </div>
       </aside>

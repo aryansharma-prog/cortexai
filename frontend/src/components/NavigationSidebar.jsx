@@ -42,10 +42,19 @@ export default function NavigationSidebar({
   );
   const { userData } = useSelector((state) => state.user);
 
+  const [loadingConvs, setLoadingConvs] = useState(false);
+
   useEffect(() => {
     const loadConvs = async () => {
-      const data = await getConversations();
-      dispatch(setConversations(data || []));
+      try {
+        setLoadingConvs(true);
+        const data = await getConversations();
+        dispatch(setConversations(data || []));
+      } catch (err) {
+        console.error("Failed to load conversations:", err);
+      } finally {
+        setLoadingConvs(false);
+      }
     };
     loadConvs();
   }, [userData?._id]);
